@@ -54,19 +54,19 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
     clearDomain(domain:string, cb:Function):void {
 
         const client = this._conn.getConnection();
-        debug('Clear all cache called');
+        //debug('Clear all cache called');
 
         client.hdel(this.hashKey, domain, (err) => {
             if (err) return cb(err);
             client.hkeys(this.getDomainHashKey(domain), (err, urls) => {
-                debug('getting keys for ', this.getDomainHashKey(domain), urls);
+                //debug('getting keys for ', this.getDomainHashKey(domain), urls);
                 if (urls.length === 0) {
                     return cb(null, true);
                 }
 
                 let nb = 0;
                 urls.forEach(url => {
-                    debug('Deleting key ', this.getUrlKey(domain, url));
+                    //debug('Deleting key ', this.getUrlKey(domain, url));
 
                     this.delete(domain, url, null, null, (err) => {
                         if (err) return cb(err);
@@ -82,10 +82,10 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
     }
 
     getCachedDomains(cb:Function):void {
-        debug('getAllCachedDomains called');
+        //debug('getAllCachedDomains called');
         this._conn.getConnection().hkeys(this.hashKey, (err, results) => {
             if (err) return cb(err);
-            debug('hkeys() ', this.hashKey, results);
+            //debug('hkeys() ', this.hashKey, results);
             return cb(null, results);
         });
     }
@@ -100,13 +100,13 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
                 return cb(null, cachedUrls);
             }
 
-            debug('found these urls in ', this.getDomainHashKey(domain), urls);
+            //debug('found these urls in ', this.getDomainHashKey(domain), urls);
             let nb = 0;
             urls.forEach(url => {
 
                 client.get(this.getUrlKey(domain, url), (err, data) => {
                     if (err) return cb(err);
-                    debug('for url, got content ', url, data);
+                    //debug('for url, got content ', url, data);
                     if (data !== null) {
                         cachedUrls.push(url);
                         nb++;
@@ -135,7 +135,7 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
      *
      */
     delete(domain:string, url:string, category, ttl,  cb):void {
-        debug('removing url cache: ', domain, url);
+        //debug('removing url cache: ', domain, url);
         const client = this._conn.getConnection();
         this.has(domain, url, category, ttl, (err, isCached) => {
             if (!isCached) {
@@ -143,14 +143,14 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
             } else {
                 client.del(this.getUrlKey(domain, url), (err) => {
                     if (err) {
-                        debug('REDIS ERROR, ', err);
+                        //debug('REDIS ERROR, ', err);
                         return cb(err);
                     }
-                    debug('DELETING HASH ', this.getDomainHashKey(domain));
+                    //debug('DELETING HASH ', this.getDomainHashKey(domain));
 
                     client.hdel(this.getDomainHashKey(domain), url, (err) => {
                         if (err) {
-                            debug('REDIS ERROR', err);
+                            //debug('REDIS ERROR', err);
                             return cb(err);
                         }
                         return cb(null, true);
@@ -176,7 +176,7 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
      *          HMDEL domain:instance key
      */
     get(domain: string, url: string, category, ttl, cb:Function):void {
-        debug('Retrieving url cache: ', domain, url);
+        //debug('Retrieving url cache: ', domain, url);
 
         const client = this._conn.getConnection();
 
@@ -215,10 +215,10 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
                 return cb(err);
             } else {
                 let isCached = data !== null;
-                debug('HAS, key ', this.getUrlKey(domain, url), 'is cached? ', isCached);
+                //debug('HAS, key ', this.getUrlKey(domain, url), 'is cached? ', isCached);
                 if (!isCached) {
                     client.hdel(this.getDomainHashKey(domain), url, (err) => {
-                        debug('hdel executed', this.getDomainHashKey(domain), url);
+                        //debug('hdel executed', this.getDomainHashKey(domain), url);
                         if (err) return cb(err);
                         return cb(null, false);
                     });
@@ -252,14 +252,14 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
             });
         }
         else if (category === 'never') {
-            debug('this url should never been stored');
+            //debug('this url should never been stored');
             return cb(null, false);
         }
         else {
             this.has(domain, url, category, ttl, (err, has) => {
                 if (err) return cb(err);
                 if (has === true) {
-                    debug('This url is already cached - not storing it: ', domain, url);
+                    //debug('This url is already cached - not storing it: ', domain, url);
                     return cb(null, false);
                 } else {
 
@@ -288,7 +288,7 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
                         return cb(err);
                     }
                     if (exists === 0) {
-                        debug('Already set ');
+                        //debug('Already set ');
                         return cb(null, true);
 
                     }
@@ -297,7 +297,7 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
                             return cb(err);
                         }
                         if (result === null) {
-                            debug('REDIS timestamp not set');
+                            //debug('REDIS timestamp not set');
                             client.set(this.getUrlKey(domain, url), Date.now(), (err) => {
                                 if (err) return cb(err);
                                 if (ttl > 0) {

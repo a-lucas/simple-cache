@@ -14,7 +14,7 @@ var HAS_URL = require('./commonCB').HAS_URL;
 var SET_URL = require('./commonCB').SET_URL;
 var DELETE_ALL = require('./commonCB').DELETE_ALL;
 
-module.exports = function(instance1, instance2, instance3) {
+module.exports = function(instance1, instance2, instance3, domain1, domain2, domain3) {
 
     var cacheMaxAgeURL = 'maxAge.html';
     var cacheAlwaysURL = 'always.html';
@@ -91,7 +91,7 @@ module.exports = function(instance1, instance2, instance3) {
     describe('Instance2 should have no domains', function() {
         HAS_NOT_DOMAIN('http://a.com', instance2);
         HAS_NOT_DOMAIN('http://b.com', instance2);
-        HAS_NOT_DOMAIN('DOMAIN2', instance2);
+        HAS_NOT_DOMAIN(domain2, instance2);
     });
 
     describe('Removing Instance3', function() {

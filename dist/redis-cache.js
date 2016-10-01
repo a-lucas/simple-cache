@@ -48,8 +48,10 @@ module.exports =
 	"use strict";
 	var cacheEnginePromise_1 = __webpack_require__(1);
 	var cacheEngineCB_1 = __webpack_require__(13);
+	var instance_1 = __webpack_require__(14);
 	module.exports.CacheEnginePromise = cacheEnginePromise_1.default;
 	module.exports.CacheEngineCB = cacheEngineCB_1.default;
+	module.exports.Instance = instance_1.default;
 
 
 /***/ },
@@ -215,7 +217,7 @@ module.exports =
 	        }
 	    };
 	    Helpers.isRegexRule = function (data) {
-	        if ((data.regex instanceof RegExp) === false) {
+	        if ((data instanceof RegExp) === false) {
 	            Helpers.invalidParameterError('This should be a Regexp', data);
 	        }
 	    };
@@ -252,7 +254,7 @@ module.exports =
 	        ['always', 'never', 'maxAge'].forEach(function (type) {
 	            Helpers.isArray(cacheRules[type]);
 	            cacheRules[type].forEach(function (rule) {
-	                Helpers.isRegexRule(rule);
+	                Helpers.isRegexRule(rule.regex);
 	                if (type === 'maxAge') {
 	                    Helpers.hasMaxAge(rule);
 	                }
@@ -423,7 +425,6 @@ module.exports =
 	        helpers_1.default.isStringDefined(defaultDomain);
 	        if (typeof CacheEngine.instances[instanceDefinition.getInstanceName()] !== 'undefined') {
 	            console.warn("Instance already exists: " + instanceDefinition.getInstanceName(), "RedisConfig And cacheRules are ignored");
-	            throw new Error("Instance already exists: " + instanceDefinition.getInstanceName());
 	        }
 	        else {
 	            CacheEngine.instances[instanceDefinition.getInstanceName()] = instanceDefinition;
@@ -494,7 +495,6 @@ module.exports =
 	    RedisStorageInstancePromise.prototype.getCachedDomains = function () {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            debug('getAllCachedDomains called');
 	            _this.cbInstance.getCachedDomains(function (err, results) {
 	                if (err) {
 	                    debug(err);
@@ -522,7 +522,6 @@ module.exports =
 	    };
 	    RedisStorageInstancePromise.prototype.delete = function (domain, url, category, ttl) {
 	        var _this = this;
-	        debug('removing url cache: ', domain, url);
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.delete(domain, url, category, ttl, function (err, results) {
 	                if (err) {
@@ -539,7 +538,6 @@ module.exports =
 	    };
 	    RedisStorageInstancePromise.prototype.get = function (domain, url, category, ttl) {
 	        var _this = this;
-	        debug('Retrieving url cache: ', domain, url);
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.get(domain, url, category, ttl, function (err, results) {
 	                if (err) {
@@ -664,18 +662,15 @@ module.exports =
 	    RedisStorageInstanceCB.prototype.clearDomain = function (domain, cb) {
 	        var _this = this;
 	        var client = this._conn.getConnection();
-	        debug('Clear all cache called');
 	        client.hdel(this.hashKey, domain, function (err) {
 	            if (err)
 	                return cb(err);
 	            client.hkeys(_this.getDomainHashKey(domain), function (err, urls) {
-	                debug('getting keys for ', _this.getDomainHashKey(domain), urls);
 	                if (urls.length === 0) {
 	                    return cb(null, true);
 	                }
 	                var nb = 0;
 	                urls.forEach(function (url) {
-	                    debug('Deleting key ', _this.getUrlKey(domain, url));
 	                    _this.delete(domain, url, null, null, function (err) {
 	                        if (err)
 	                            return cb(err);
@@ -689,12 +684,9 @@ module.exports =
 	        });
 	    };
 	    RedisStorageInstanceCB.prototype.getCachedDomains = function (cb) {
-	        var _this = this;
-	        debug('getAllCachedDomains called');
 	        this._conn.getConnection().hkeys(this.hashKey, function (err, results) {
 	            if (err)
 	                return cb(err);
-	            debug('hkeys() ', _this.hashKey, results);
 	            return cb(null, results);
 	        });
 	    };
@@ -708,13 +700,11 @@ module.exports =
 	            if (urls.length === 0) {
 	                return cb(null, cachedUrls);
 	            }
-	            debug('found these urls in ', _this.getDomainHashKey(domain), urls);
 	            var nb = 0;
 	            urls.forEach(function (url) {
 	                client.get(_this.getUrlKey(domain, url), function (err, data) {
 	                    if (err)
 	                        return cb(err);
-	                    debug('for url, got content ', url, data);
 	                    if (data !== null) {
 	                        cachedUrls.push(url);
 	                        nb++;
@@ -738,7 +728,6 @@ module.exports =
 	    };
 	    RedisStorageInstanceCB.prototype.delete = function (domain, url, category, ttl, cb) {
 	        var _this = this;
-	        debug('removing url cache: ', domain, url);
 	        var client = this._conn.getConnection();
 	        this.has(domain, url, category, ttl, function (err, isCached) {
 	            if (!isCached) {
@@ -747,13 +736,10 @@ module.exports =
 	            else {
 	                client.del(_this.getUrlKey(domain, url), function (err) {
 	                    if (err) {
-	                        debug('REDIS ERROR, ', err);
 	                        return cb(err);
 	                    }
-	                    debug('DELETING HASH ', _this.getDomainHashKey(domain));
 	                    client.hdel(_this.getDomainHashKey(domain), url, function (err) {
 	                        if (err) {
-	                            debug('REDIS ERROR', err);
 	                            return cb(err);
 	                        }
 	                        return cb(null, true);
@@ -767,7 +753,6 @@ module.exports =
 	    };
 	    RedisStorageInstanceCB.prototype.get = function (domain, url, category, ttl, cb) {
 	        var _this = this;
-	        debug('Retrieving url cache: ', domain, url);
 	        var client = this._conn.getConnection();
 	        client.hget(this.getDomainHashKey(domain), url, function (err, content) {
 	            if (err)
@@ -801,10 +786,8 @@ module.exports =
 	            }
 	            else {
 	                var isCached = data !== null;
-	                debug('HAS, key ', _this.getUrlKey(domain, url), 'is cached? ', isCached);
 	                if (!isCached) {
 	                    client.hdel(_this.getDomainHashKey(domain), url, function (err) {
-	                        debug('hdel executed', _this.getDomainHashKey(domain), url);
 	                        if (err)
 	                            return cb(err);
 	                        return cb(null, false);
@@ -827,7 +810,6 @@ module.exports =
 	            });
 	        }
 	        else if (category === 'never') {
-	            debug('this url should never been stored');
 	            return cb(null, false);
 	        }
 	        else {
@@ -835,7 +817,6 @@ module.exports =
 	                if (err)
 	                    return cb(err);
 	                if (has === true) {
-	                    debug('This url is already cached - not storing it: ', domain, url);
 	                    return cb(null, false);
 	                }
 	                else {
@@ -865,7 +846,6 @@ module.exports =
 	                        return cb(err);
 	                    }
 	                    if (exists === 0) {
-	                        debug('Already set ');
 	                        return cb(null, true);
 	                    }
 	                    client.get(_this.getUrlKey(domain, url), function (err, result) {
@@ -873,7 +853,6 @@ module.exports =
 	                            return cb(err);
 	                        }
 	                        if (result === null) {
-	                            debug('REDIS timestamp not set');
 	                            client.set(_this.getUrlKey(domain, url), Date.now(), function (err) {
 	                                if (err)
 	                                    return cb(err);
@@ -1034,6 +1013,130 @@ module.exports =
 	}(CacheEngine_1.default));
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.default = CacheEngineCB;
+
+
+/***/ },
+/* 14 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var CacheRuleEngine_1 = __webpack_require__(15);
+	var helpers_1 = __webpack_require__(3);
+	var pool_1 = __webpack_require__(11);
+	var Instance = (function () {
+	    function Instance(instanceName, rules, redisConfig) {
+	        this.instanceName = instanceName;
+	        this.redisConfig = redisConfig;
+	        helpers_1.default.validateCacheConfig(rules);
+	        this.ruleEngine = new CacheRuleEngine_1.default(rules);
+	        new pool_1.RedisPool(redisConfig);
+	    }
+	    Instance.prototype.getInstanceName = function () {
+	        return this.instanceName;
+	    };
+	    Instance.prototype.getCacheRuleEngine = function () {
+	        return this.ruleEngine;
+	    };
+	    Instance.prototype.getRedisConfig = function () {
+	        return this.redisConfig;
+	    };
+	    return Instance;
+	}());
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.default = Instance;
+
+
+/***/ },
+/* 15 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var helpers_1 = __webpack_require__(3);
+	var CacheRuleEngine = (function () {
+	    function CacheRuleEngine(_rules, scan) {
+	        if (scan === void 0) { scan = true; }
+	        this._rules = _rules;
+	        this.scan = scan;
+	    }
+	    CacheRuleEngine.prototype.addMaxAgeRule = function (regex, maxAge) {
+	        helpers_1.default.isNotUndefined(regex, maxAge);
+	        helpers_1.default.isRegexRule(regex);
+	        helpers_1.default.hasMaxAge({ regex: maxAge });
+	        if (this.scan) {
+	            var found = this.findRegex(regex);
+	            if (found !== null) {
+	                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
+	            }
+	        }
+	        this._rules.maxAge.push({ regex: regex, maxAge: maxAge });
+	    };
+	    CacheRuleEngine.prototype.addNeverRule = function (regex) {
+	        helpers_1.default.isNotUndefined(regex);
+	        helpers_1.default.isRegexRule(regex);
+	        if (this.scan) {
+	            var found = this.findRegex(regex);
+	            if (found !== null) {
+	                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
+	            }
+	        }
+	        this._rules.never.push({ regex: regex });
+	    };
+	    CacheRuleEngine.prototype.addAlwaysRule = function (regex) {
+	        helpers_1.default.isNotUndefined(regex);
+	        helpers_1.default.isRegexRule(regex);
+	        if (this.scan) {
+	            var found = this.findRegex(regex);
+	            if (found !== null) {
+	                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
+	            }
+	        }
+	        this._rules.never.push({ regex: regex });
+	    };
+	    CacheRuleEngine.prototype.mergeWith = function (rules) {
+	    };
+	    CacheRuleEngine.prototype.setDefault = function (strategy) {
+	        helpers_1.default.isStringIn(strategy, ['always', 'never']);
+	        this._rules.default = strategy;
+	    };
+	    CacheRuleEngine.prototype.removeRule = function (regex) {
+	        helpers_1.default.isNotUndefined(regex);
+	        helpers_1.default.isRegexRule(regex);
+	        var found = this.findRegex(regex);
+	        if (found === null) {
+	            throw new Error('trying to remove a regex that is not there already');
+	        }
+	        this._rules[found.type].splice(found.index, 1);
+	    };
+	    CacheRuleEngine.prototype.removeAllMaxAgeRules = function () {
+	        this._rules.maxAge = [];
+	    };
+	    CacheRuleEngine.prototype.removeAllNeverRules = function () {
+	        this._rules.never = [];
+	    };
+	    CacheRuleEngine.prototype.removeAllAlwaysRules = function () {
+	        this._rules.always = [];
+	    };
+	    CacheRuleEngine.prototype.getRules = function () {
+	        return this._rules;
+	    };
+	    CacheRuleEngine.prototype.findRegex = function (regex) {
+	        var _this = this;
+	        ['always', 'never', 'maxAge'].forEach(function (type) {
+	            _this._rules[type].forEach(function (rule, index) {
+	                if (helpers_1.default.SameRegex(rule.regex, regex)) {
+	                    return {
+	                        type: type,
+	                        index: index
+	                    };
+	                }
+	            });
+	        });
+	        return null;
+	    };
+	    return CacheRuleEngine;
+	}());
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.default = CacheRuleEngine;
 
 
 /***/ }

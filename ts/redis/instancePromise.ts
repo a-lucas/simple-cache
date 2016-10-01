@@ -47,7 +47,7 @@ export default class RedisStorageInstancePromise extends StorageInstance {
 
     getCachedDomains(): Promise<string[]> {
         return new Promise((resolve, reject)=> {
-            debug('getAllCachedDomains called');
+            //debug('getAllCachedDomains called');
             this.cbInstance.getCachedDomains((err, results) => {
                 if (err) {
                     debug(err);
@@ -79,7 +79,7 @@ export default class RedisStorageInstancePromise extends StorageInstance {
      *
      */
     delete(domain: string, url: string, category, ttl):Promise<boolean> {
-        debug('removing url cache: ', domain, url);
+        //debug('removing url cache: ', domain, url);
         return new Promise((resolve, reject) => {
             this.cbInstance.delete(domain, url, category, ttl, (err, results) => {
                 if (err) {
@@ -107,7 +107,7 @@ export default class RedisStorageInstancePromise extends StorageInstance {
      *          HMDEL domain:instance key
      */
     get(domain: string, url:string, category, ttl):Promise<string> {
-        debug('Retrieving url cache: ', domain, url);
+        //debug('Retrieving url cache: ', domain, url);
         return new Promise((resolve, reject) => {
             this.cbInstance.get(domain, url, category, ttl, (err, results) => {
                 if (err) {

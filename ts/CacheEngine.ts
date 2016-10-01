@@ -50,7 +50,7 @@ export default class CacheEngine {
         Helpers.isStringDefined(defaultDomain);
         if(typeof CacheEngine.instances[instanceDefinition.getInstanceName()] !== 'undefined') {
             console.warn("Instance already exists: " + instanceDefinition.getInstanceName(), "RedisConfig And cacheRules are ignored");
-            throw new Error("Instance already exists: " + instanceDefinition.getInstanceName());
+            //throw new Error("Instance already exists: " + instanceDefinition.getInstanceName());
         } else {
             CacheEngine.instances[instanceDefinition.getInstanceName()] = instanceDefinition
         }

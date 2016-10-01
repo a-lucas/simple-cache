@@ -19,7 +19,7 @@ var URL_DETAILS = require('./commonCB').URL_DETAILS;
 var GET_URLS = require('./commonCB').GET_URLS;
 var WAIT_GET_URLS = require('./commonCB').WAIT_GET_URLS;
 
-module.exports = function (cacheEngine) {
+module.exports = function (cacheEngine, defaultDomain) {
 
     var cacheMaxAgeURL = '/maxAge.html';
     var cacheAlwaysURL = '/always.html';
@@ -120,17 +120,11 @@ module.exports = function (cacheEngine) {
 
         debug('SETTING URLS', urlCaches.length);
 
-        describe('URLS should have the same instance name & storage type', function () {
+        describe('URLS should have the same instance name', function () {
             it('Instances', function () {
                 expect(urlCaches[0].getInstanceName()).eql(urlCaches[1].getInstanceName());
                 expect(urlCaches[0].getInstanceName()).eql(urlCaches[2].getInstanceName());
                 expect(urlCaches[2].getInstanceName()).eql(urlCaches[1].getInstanceName());
-            });
-
-            it('Storage Type', function () {
-                expect(urlCaches[0].getStorageType()).eql(urlCaches[1].getStorageType());
-                expect(urlCaches[0].getStorageType()).eql(urlCaches[2].getStorageType());
-                expect(urlCaches[2].getStorageType()).eql(urlCaches[1].getStorageType());
             });
         });
 
@@ -144,19 +138,19 @@ module.exports = function (cacheEngine) {
         URL_DETAILS(urlCaches[0], '/always.html', 'always', 'http://a.com');
         URL_DETAILS(urlCaches[1], '/always.html', 'always', 'http://b.com');
 
-        HAS_DOMAIN('COMMON_DOMAIN', cacheEngine);
+        HAS_DOMAIN(defaultDomain, cacheEngine);
         HAS_DOMAIN('http://a.com', cacheEngine);
         HAS_DOMAIN('http://b.com', cacheEngine);
 
         DELETE_DOMAIN('http://a.com', cacheEngine);
 
-        HAS_DOMAIN('COMMON_DOMAIN', cacheEngine);
+        HAS_DOMAIN(defaultDomain, cacheEngine);
         HAS_DOMAIN('http://b.com', cacheEngine);
 
         DELETE_DOMAIN('http://whatever_should_silently_succeed', cacheEngine);
         DELETE_DOMAIN('http://b.com', cacheEngine);
         DELETE_DOMAIN('http://b.com', cacheEngine);
-        DELETE_DOMAIN('COMMON_DOMAIN', cacheEngine);
+        DELETE_DOMAIN(defaultDomain, cacheEngine);
 
         describe('These URLs shouldnt be cached anymore', function () {
             HAS_NOT_URL(urlCaches[0]);
@@ -175,7 +169,7 @@ module.exports = function (cacheEngine) {
         urlCaches.push(cacheEngine.url('http://a.com/1always.html'));
         urlCaches.push(cacheEngine.url('http://a.com/maxAge.html'));
 
-        GET_URLS(urlCaches[0].getDomain(), cacheEngine, []);
+        GET_URLS(defaultDomain, cacheEngine, []);
         GET_URLS('http://a.com', cacheEngine, []);
 
         SET_URL(urlCaches[0], html);
@@ -185,11 +179,11 @@ module.exports = function (cacheEngine) {
         GET_URLS(urlCaches[0].getDomain(), cacheEngine, ['/0always.html']);
         GET_URLS('http://a.com', cacheEngine, ['/1always.html', '/maxAge.html']);
 
-        WAIT_GET_URLS(cacheEngine, 1100, urlCaches[1].getDomain(), ['/1always.html']);
+        WAIT_GET_URLS(cacheEngine, 1100, 'http://a.com', ['/1always.html']);
 
         DELETE_ALL(cacheEngine);
 
-        GET_URLS(urlCaches[0].getDomain(), cacheEngine, []);
+        GET_URLS(defaultDomain, cacheEngine, []);
         GET_URLS('http://a.com', cacheEngine, []);
 
         DELETE_ALL(cacheEngine);

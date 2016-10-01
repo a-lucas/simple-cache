@@ -7,7 +7,7 @@ export default class CacheRuleEngine {
 
     addMaxAgeRule(regex: RegExp, maxAge:number) {
         Helpers.isNotUndefined(regex, maxAge);
-        Helpers.isRegexRule({regex: regex});
+        Helpers.isRegexRule(regex);
         Helpers.hasMaxAge({regex: maxAge});
         if(this.scan) {
             const found = this.findRegex(regex);
@@ -20,7 +20,7 @@ export default class CacheRuleEngine {
 
     addNeverRule(regex: RegExp) {
         Helpers.isNotUndefined(regex);
-        Helpers.isRegexRule({regex: regex});
+        Helpers.isRegexRule(regex);
         if(this.scan){
             const found = this.findRegex(regex);
             if (found!== null) {
@@ -32,7 +32,7 @@ export default class CacheRuleEngine {
 
     addAlwaysRule(regex: RegExp) {
         Helpers.isNotUndefined(regex);
-        Helpers.isRegexRule({regex: regex});
+        Helpers.isRegexRule(regex);
         if(this.scan) {
             const found = this.findRegex(regex);
             if (found!== null) {
@@ -53,7 +53,7 @@ export default class CacheRuleEngine {
 
     removeRule(regex: RegExp) {
         Helpers.isNotUndefined(regex);
-        Helpers.isRegexRule({regex: regex});
+        Helpers.isRegexRule(regex);
         const found = this.findRegex(regex);
         if (found === null) {
             throw new Error('trying to remove a regex that is not there already');

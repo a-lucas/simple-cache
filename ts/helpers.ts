@@ -28,7 +28,7 @@ export default class Helpers {
         }
     }
 
-    static parseURL(url): parsedURL {
+    static parseURL(url: string): parsedURL {
         Helpers.isStringDefined(url);
 
         const parsedURL = nodeurl.parse(url);
@@ -51,7 +51,7 @@ export default class Helpers {
             relativeURL: relativeURL
         };
     }
-    
+
     static isNotUndefined( ...input: any[] ) {
         if(input.length = 0){
             Helpers.invalidParameterError('No parameters required', input);
@@ -63,14 +63,14 @@ export default class Helpers {
         }
     }
 
-    static isArray(data:any) {
+    static isArray(data:Array<any>) {
         if((data instanceof Array) === false) {
             Helpers.invalidParameterError('This should be an array', data);
         }
     }
 
-    static isRegexRule(data:any) {
-        if ((data.regex instanceof RegExp) === false) {
+    static isRegexRule(data:RegExp) {
+        if ((data instanceof RegExp) === false) {
             Helpers.invalidParameterError('This should be a Regexp', data);
         }
     }
@@ -81,13 +81,13 @@ export default class Helpers {
         }
     }
 
-    static isBoolean(data: any) {
+    static isBoolean(data: boolean) {
         if(typeof data !== 'boolean') {
             Helpers.invalidParameterError('This is not a boolean probably the force param missing', data);
         }
     }
 
-    static isOptionalBoolean(data: any) {
+    static isOptionalBoolean(data: boolean) {
         if (typeof data !== 'undefined' && typeof data !== 'boolean') {
             Helpers.invalidParameterError('You provided an optional boolean but this is not a boolean', data);
         }
@@ -113,7 +113,7 @@ export default class Helpers {
             Helpers.isArray(cacheRules[type]);
 
             cacheRules[type].forEach(rule => {
-                Helpers.isRegexRule(rule);
+                Helpers.isRegexRule(rule.regex);
                 if (type === 'maxAge') {
                     Helpers.hasMaxAge(rule);
                 }

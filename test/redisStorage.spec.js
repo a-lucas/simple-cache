@@ -1,7 +1,9 @@
-var simpleCache = require('./../dist/redis-cache').CacheEnginePromise;
+var CacheEngine = require('./../dist/redis-cache').CacheEnginePromise;
+var Instance = require('./../dist/redis-cache').Instance;
+
 var cacheRules = require('./helper/cacheRules');
-var instance = require('./helper/instance');
-var instances = require('./helper/instances');
+var oneInstance = require('./helper/oneInstance');
+var manyInstances = require('./helper/manyInstances');
 
 var storageConfig = {
     type: 'redis',
@@ -11,27 +13,37 @@ var storageConfig = {
 };
 
 
-describe('REDIS storage testing', function() {
+describe('REDIS storage with PROMISES', function() {
 
     var redis1,
         redis2,
         redis3,
-        redis4;
+        redis4,
+        domain1='http://localhost:3000',
+        domain2='http://localhost:3001',
+        domain3='http://localhost:3002',
+        domain4='http://localhost:3003';
 
 
     describe('One Instance ', function () {
 
         this.timeout(2000);
+        var instance1 = new Instance('INSTANCE', cacheRules, storageConfig);
+        redis1 = new CacheEngine(domain1, instance1);
 
-        redis1 = new simpleCache('COMMON_DOMAIN', 'INSTANCE',  storageConfig, cacheRules);
-        instance(redis1);
+        oneInstance(redis1, domain1);
 
     });
 
     describe('Two common instance, one separate instance', function() {
-        redis2 = new simpleCache('DOMAIN1', 'INSTANCE1',  storageConfig, cacheRules);
-        redis3 = new simpleCache('DOMAIN2', 'INSTANCE1',  storageConfig, cacheRules);
-        redis4 = new simpleCache('DOMAIN3', 'INSTANCE2',  storageConfig, cacheRules);
-        instances(redis2, redis3, redis4);
+        var instance2 = new Instance('INSTANCE1', cacheRules, storageConfig);
+        var instance3 = new Instance('INSTANCE1', cacheRules, storageConfig);
+        var instance4 = new Instance('INSTANCE3', cacheRules, storageConfig);
+
+        redis2 = new CacheEngine(domain2, instance2);
+        redis3 = new CacheEngine(domain3, instance3);
+        redis4 = new CacheEngine(domain4, instance4);
+
+        manyInstances(redis2, redis3, redis4, domain2, domain3, domain4);
     });
 });

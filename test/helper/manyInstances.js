@@ -16,7 +16,7 @@ var SET_URL = require('./common').SET_URL;
 
 var DELETE_ALL = require('./common').DELETE_ALL;
 
-module.exports = function(instance1, instance2, instance3) {
+module.exports = function(instance1, instance2, instance3, defaultDomain1, defaultDomain2, defaultDomain3) {
 
 
     var cacheMaxAgeURL = 'maxAge.html';
@@ -55,7 +55,7 @@ module.exports = function(instance1, instance2, instance3) {
             HAS_URL(instance2Urls[0]);
             HAS_URL(instance2Urls[1]);
         })
-        describe('The default domain shuld not be set', function() {
+        describe('The default domain should not be set', function() {
             HAS_NOT_URL(instance2Urls[2]);
         });
     });
@@ -87,7 +87,6 @@ module.exports = function(instance1, instance2, instance3) {
 
     });
 
-
     describe('Removing instance1', function() {
         DELETE_ALL(instance1);
     });
@@ -95,11 +94,11 @@ module.exports = function(instance1, instance2, instance3) {
     describe('Instance2 should have no domains', function() {
         HAS_NOT_DOMAIN('http://a.com', instance2);
         HAS_NOT_DOMAIN('http://b.com', instance2);
-        HAS_NOT_DOMAIN('DOMAIN2', instance2);
+        HAS_NOT_DOMAIN(defaultDomain2, instance2);
     });
 
     describe('Removing Instance3', function() {
         DELETE_ALL(instance3);
     });
-
+    
 };

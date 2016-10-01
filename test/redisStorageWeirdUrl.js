@@ -1,5 +1,6 @@
+var CacheEngine = require('./../dist/redis-cache').CacheEnginePromise;
+var Instance = require('./../dist/redis-cache').Instance;
 
-var simpleCache = require('./../dist/redis-cache').CacheEnginePromise;
 var weirdUrls = require('./helper/weirdUrls');
 
 var chai = require('chai');
@@ -34,8 +35,9 @@ describe('The redisStorage - weirdURLs', function() {
         default: 'never'
     };
 
-    var redisCache = new simpleCache('http://localhost: 3456', 'INSTANCE', storageConfig, cacheRules);
-
+    var instance1 = new Instance('INSTANCE-WEIRD', cacheRules, storageConfig);
+    var redisCache = new CacheEngine('http://localhost: 3456', instance1);
+    
     var html = "content";
 
     describe('Should pass', function() {
