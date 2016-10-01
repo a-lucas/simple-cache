@@ -12,12 +12,10 @@ const debug = dbug('simple-url-cache');
 class CacheEnginePromise extends CacheEngine{
 
     private storageInstance: RedisStorageInstancePromise;
-    private instanceName: string;
 
     constructor(defaultDomain:string, instance: Instance) {
         super(defaultDomain, instance);
         this.storageInstance = new RedisStorageInstancePromise(instance);
-        this.instanceName = instance.getInstanceName();
     }
 
     //Instance helpers

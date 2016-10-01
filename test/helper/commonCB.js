@@ -96,12 +96,12 @@ function SET_URL_FALSE(url, html) {
 
 function URL_DETAILS(url, expectedUrl, expectedClassification, expectedDomain) {
     describe('some validation ', function(){
-        it(url.getUrl() +' classification is ' + url.getCategory(), function() {
+        it(' classification check & url name check ', function() {
             expect(url.getUrl()).eql(expectedUrl);
             expect(url.getCategory()).eql(expectedClassification);
         });
         if(expectedDomain) {
-            it(url.getDomain() + ' domain should be ' + expectedDomain, function() {
+            it(' domain check ', function() {
                 expect(url.getDomain()).eql(expectedDomain);
             })
         }
@@ -146,7 +146,7 @@ function HAS_NOT_DOMAIN(domain, cacheEngine) {
 function DELETE_DOMAIN(domain, cacheEngine) {
 
     describe('Deleting domain ' + domain , function() {
-        it('Should delete the domain without error ', function () {
+        it('Should delete the domain without error ', function (done) {
             cacheEngine.clearDomain(domain, function(err) {
                 if(err) return done(err);
                 done();

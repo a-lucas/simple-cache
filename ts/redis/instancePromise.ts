@@ -1,4 +1,4 @@
-import {StorageInstance} from "./../interfaces";
+import {StorageInstance, CacheRules} from "./../interfaces";
 import * as debg from 'debug';
 import {Promise} from 'es6-promise';
 import RedisStorageInstanceCB from "./instanceCB";
@@ -11,10 +11,14 @@ export default class RedisStorageInstancePromise extends StorageInstance {
     private cbInstance;
     public type = 'promise';
 
-    constructor(instance: Instance) {
+    constructor(private instance: Instance) {
         super();
         this.hashKey = 'simple-url-cache:' + instance.getInstanceName();
         this.cbInstance = new RedisStorageInstanceCB(instance);
+    }
+
+    getCacheRules(): CacheRules {
+        return this.instance.getCacheRuleEngine().getRules();
     }
 
     clearCache():Promise<boolean> {

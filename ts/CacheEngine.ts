@@ -15,6 +15,9 @@ export default class CacheEngine {
         validateCacheConfig: Helpers.validateCacheConfig
     };
 
+    static hashKey: string = 'url-cache:';
+
+    protected instanceName: string;
     /**
      *
      * @param defaultDomain This is the default domain when the url doesn't contain any host information.
@@ -54,5 +57,42 @@ export default class CacheEngine {
         } else {
             CacheEngine.instances[instanceDefinition.getInstanceName()] = instanceDefinition
         }
+        this.instanceName = instanceDefinition.getInstanceName();
+    }
+
+    static urls = [];
+
+    protected addUrl(url) {
+        CacheEngine.urls.push(url);
+    }
+
+    static publish() {
+        CacheEngine.urls.forEach( url => {
+            url.setCacheCategory();
+        })
+    }
+
+    /**
+     * Way of storing instance rule config
+     *
+     * HASH for default values
+     *
+     * redis-url-cache:instances  name1 always name2 never ....
+     *
+     * 4 HASHES per instances
+     *
+     * url-cache:rule-config:name1:always /domain1/ /url/ /domain2/ /url/ and so on*
+     * url-cache:rule-config:name1:never  same
+     * url-cache:rule-config:name1:maxAge /domain1/ /url/ /domain2/ /url/ and so on*
+     * url-cache:rule-config:name1:maxAgeTTL /domain1/:/url/ "3600"
+     *
+     */
+
+    get cacheRulesManager() {
+        return this.instanceDefinition.ruleEngine.manager;
+    }
+
+    getInstanceName() : string {
+        return this.instanceName;
     }
 }

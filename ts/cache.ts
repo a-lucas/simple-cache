@@ -6,17 +6,22 @@ import Instance from "./instance";
 import RedisStorageInstancePromise from "./redis/instancePromise";
 import RedisStorageInstanceCB from "./redis/instanceCB";
 
+var debug = require('debug')('simple-url-cache');
+
 export class CacheCommon {
 
     private _category:string = '';
     private _maxAge:number = 0;
     protected _storageInstanceCB: RedisStorageInstanceCB;
     protected _storageInstancePromise: RedisStorageInstancePromise;
+    protected _storageType: string;
 
     constructor( private _domain: string, _storageInstance: RedisStorageInstanceCB | RedisStorageInstancePromise, protected _instanceName: string,  private _url: string ) {
         if(this.isRedisCB(_storageInstance)) {
+            this._storageType = 'callback';
             this._storageInstanceCB = _storageInstance;
         } else {
+            this._storageType = 'promise';
             this._storageInstancePromise = _storageInstance;
         }
         this.setCacheCategory();
@@ -24,6 +29,14 @@ export class CacheCommon {
 
     private isRedisCB(storageInstance: RedisStorageInstanceCB | RedisStorageInstancePromise): storageInstance is RedisStorageInstanceCB {
         return (<RedisStorageInstanceCB>storageInstance).type === 'cb';
+    }
+
+    /**
+     * recalculate the maxAge and category
+     */
+    check(): this {
+        this.setCacheCategory();
+        return this;
     }
 
     getDomain(): string {
@@ -50,38 +63,47 @@ export class CacheCommon {
         return u.regex.test(this._url);
     };
 
-    private setCacheCategory(): void  {
-        let i;
+    public setCacheCategory(): void  {
+        let i, config;
+        if(this._storageType === 'callback') {
+             config = this._storageInstanceCB.instance.ruleEngine.manager.cacheRules;
+        } else {
+            //const config = this._storageInstancePromise.getCacheRules();
+        }
+        debug('setCacheCategory Called with config ', config);
 
-        const config = CacheEngine.instances[this._instanceName].getCacheRuleEngine().getRules();
+
+        //const config = this._storageInstanceCB.getCacheRules();
 
         for (i in config.maxAge) {
             if (this.getRegexTest (config.maxAge[i]) === true) {
                 this._category = 'maxAge';
                 this._maxAge = config.maxAge[i].maxAge;
+                return;
             }
         }
 
         for (i in config.always) {
             if (this.getRegexTest (config.always[i]) === true) {
                 this._category = 'always';
+                return;
             }
         }
 
         for (i in config.never) {
             if (this.getRegexTest (config.never[i]) === true) {
                 this._category = 'never';
+                return;
             }
         }
-        if(this._category.length === 0) {
-            this._category = config.default;
-        }
+
+        this._category = config.default;
+        //debug(this.getCategory());
     };
 
 }
 
 export class CachePromise extends CacheCommon {
-
 
     delete = (): Promise<boolean> => {
         return this._storageInstancePromise.delete(this.getDomain(), this.getUrl(), this.getCategory(), this.getTTL());

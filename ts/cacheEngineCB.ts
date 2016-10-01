@@ -11,12 +11,10 @@ const debug = dbug('simple-url-cache');
 class CacheEngineCB extends CacheEngine{
 
     private storageInstance: RedisStorageInstanceCB;
-    private instanceName: string;
 
     constructor(defaultDomain:string, instance: Instance) {
         super(defaultDomain, instance);
         this.storageInstance = new RedisStorageInstanceCB(instance);
-        this.instanceName = instance.getInstanceName();
     }
 
     clearDomain(domain:string, cb: CallBackBooleanParam):void {
@@ -52,7 +50,9 @@ class CacheEngineCB extends CacheEngine{
             parsedURL.domain = this.defaultDomain;
         }
 
-        return new CacheCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+        let urll  = new CacheCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+        CacheEngine.urls.push(urll);
+        return urll;
     }
 
 }

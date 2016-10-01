@@ -1,5 +1,6 @@
 import {RedisStorageConfig, parsedURL} from './interfaces';
 import * as nodeurl from 'url';
+import CacheEngine from "./CacheEngine";
 
 export default class Helpers {
 
@@ -63,6 +64,8 @@ export default class Helpers {
         }
     }
 
+
+
     static isArray(data:Array<any>) {
         if((data instanceof Array) === false) {
             Helpers.invalidParameterError('This should be an array', data);
@@ -121,12 +124,39 @@ export default class Helpers {
         });
     }
 
+    // from http://stackoverflow.com/questions/12075927/serialization-of-regexp
+    static JSONRegExpReplacer(key, value) {
+        if (value instanceof RegExp) {
+            return ("__REGEXP " + value.toString());
+        }
+        else {
+            return value;
+        }
+    }
+
+    static JSONRegExpReviver(key, value) {
+        if (value.toString().indexOf("__REGEXP ") == 0) {
+            var m = value.split("__REGEXP ")[1].match(/\/(.*)\/(.*)?/);
+            return new RegExp(m[1], m[2] || "");
+        } else {
+            return value;
+        }
+    }
+
+    static getConfigKey() {
+        return 'url-cache:ruleconfig';
+    }
 
     static validateRedisStorageConfig(data: any) {
         //todo
+        return false;
     }
 
     static invalidParameterError(name, value) {
         throw new TypeError('Invalid parameter: ' + name + '. Value received: ' + JSON.stringify(value));
+    }
+
+    static RedisError(description: string, msg: string) {
+        throw new Error('Redis: ' + description + '. Error received: ' + msg);
     }
 }

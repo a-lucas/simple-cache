@@ -5,12 +5,17 @@ import {RedisPool} from "./redis/pool";
 
 
 export default class Instance {
-    private ruleEngine:CacheRuleEngine;
+    public ruleEngine:CacheRuleEngine;
+    private _conn: RedisPool;
 
-    constructor(private instanceName: string, rules: CacheRules, private redisConfig: RedisStorageConfig){
-        Helpers.validateCacheConfig(rules);
-        this.ruleEngine = new CacheRuleEngine(rules);
-        new RedisPool(redisConfig);
+    constructor(private instanceName: string, private redisConfig: RedisStorageConfig, cb: Function){
+        this._conn = new RedisPool(instanceName, redisConfig, (err) => {
+            if(err) throw new Error('Error connecting to REDIS');
+        });
+        this.ruleEngine = new CacheRuleEngine(instanceName, this._conn, false, (err) => {
+            if(err) return cb(err);
+            cb();
+        });
     }
 
     getInstanceName():string {
@@ -24,4 +29,5 @@ export default class Instance {
     getRedisConfig(): RedisStorageConfig {
         return this.redisConfig;
     }
+
 }

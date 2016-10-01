@@ -10,66 +10,71 @@ export class RedisPool {
 
     static _isOnline = {}
 
-    private db;
+    private instanceName: string;
 
-    static connect(config: RedisStorageConfig): redis.RedisClient {
-        if (typeof RedisPool._pool[config.db] === 'undefined' || RedisPool._pool[config.db] === null || !RedisPool._isOnline[config.db]) {
-            debug('This redis connection has never been instanciated before', config.db);
-            RedisPool._isOnline[config.db] = false;
+    static connect(instanceName: string, config: RedisStorageConfig, cb:Function): redis.RedisClient {
+        if (typeof RedisPool._pool[instanceName] === 'undefined' || RedisPool._pool[instanceName] === null || !RedisPool._isOnline[instanceName]) {
+            debug('This redis connection has never been instanciated before', instanceName);
+            RedisPool._isOnline[instanceName] = false;
 
-            RedisPool._pool[config.db] = redis.createClient(config);
+            RedisPool._pool[instanceName] = redis.createClient(config);
 
-            RedisPool._pool[config.db].on('connect', () => {
-                RedisPool._isOnline[config.db] = true;
+            RedisPool._pool[instanceName].on('connect', () => {
+                RedisPool._isOnline[instanceName] = true;
                 debug('redis connected');
+                cb(null);
             });
 
-            RedisPool._pool[config.db].on('error', (e) => {
+            RedisPool._pool[instanceName].on('error', (e) => {
                 debug(e);
-                RedisPool._isOnline[config.db] = false;
-                RedisPool._pool[config.db] = null;
-                throw new Error(e);
+                RedisPool._isOnline[instanceName] = false;
+                RedisPool._pool[instanceName] = null;
+                cb(e);
             });
 
-            RedisPool._pool[config.db].on('end', () => {
-                RedisPool._pool[config.db] = null;
-                RedisPool._isOnline[config.db] = false;
-                debug('Connection closed');
+            RedisPool._pool[instanceName].on('end', () => {
+                RedisPool._pool[instanceName] = null;
+                RedisPool._isOnline[instanceName] = false;
+                console.warn('Redis Connection closed for instance ' + instanceName);
+                debug('Connection closed', instanceName);
             });
 
-            RedisPool._pool[config.db].on('warning', (msg) => {
-                debug('Warning called: ', msg);
+            RedisPool._pool[instanceName].on('warning', (msg) => {
+                console.warn('Redis warning for instance '+instanceName+ '. MSG = ', msg);
+                debug('Warning called: ', instanceName, msg);
             });
         }
-        return RedisPool._pool[config.db];
+        return RedisPool._pool[instanceName];
     }
 
-    static isOnline(db): boolean {
-        return RedisPool._isOnline[db];
+    static isOnline(instanceName): boolean {
+        return RedisPool._isOnline[instanceName];
     }
 
-    static kill(db){
-        if (RedisPool._isOnline[db] === true) {
-            RedisPool._pool[db].end();
+    static kill(instanceName){
+        if (RedisPool._isOnline[instanceName] === true) {
+            RedisPool._pool[instanceName].end();
         }
     }
 
-    constructor(config: RedisStorageConfig) {
-        RedisPool.connect(config);
-        this.db = config.db;
+    constructor(instanceName: string, config: RedisStorageConfig, cb?:Function) {
+        this.instanceName = instanceName;
+        RedisPool.connect(instanceName, config, (err) => {
+            if(err) cb(err);
+        });
     }
 
     getConnection(): redis.RedisClient {
-        return RedisPool._pool[this.db];
+        return RedisPool._pool[this.instanceName];
     }
 
     isOnline():boolean {
-        return RedisPool._isOnline[this.db];
+        return RedisPool._isOnline[this.instanceName];
     }
 
     kill() {
-        if (RedisPool._isOnline[this.db] === true) {
-            RedisPool._pool[this.db].end();
+        if (RedisPool._isOnline[this.instanceName] === true) {
+            RedisPool._pool[this.instanceName].end();
         }
     }
 }

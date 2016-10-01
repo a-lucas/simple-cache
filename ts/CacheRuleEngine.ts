@@ -1,94 +1,75 @@
 import {CacheRules} from "./interfaces";
 import Helpers from "./helpers";
+import {RedisPool} from "./redis/pool";
+import CacheRuleManager from './CacheRuleManager';
+import CacheEngine from "./CacheEngine";
+
+const debug = require('debug')('simple-url-cache-RULE');
 
 export default class CacheRuleEngine {
 
-    constructor(private _rules: CacheRules, private scan: boolean = true) {}
+   public manager: CacheRuleManager;
 
-    addMaxAgeRule(regex: RegExp, maxAge:number) {
-        Helpers.isNotUndefined(regex, maxAge);
-        Helpers.isRegexRule(regex);
-        Helpers.hasMaxAge({regex: maxAge});
-        if(this.scan) {
-            const found = this.findRegex(regex);
-            if (found!== null) {
-                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
+
+    /**
+     * 
+     * 
+     * 
+     * @param instanceName
+     * @param _conn
+     * @param scan
+     */
+    constructor(private instanceName: string, private _conn: RedisPool, private scan: boolean = true, cb) {
+
+        this._conn.getConnection().hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
+            if (err) throw new Error('Redis error - retrieving ' + Helpers.getConfigKey() + ' -> ' + err);
+            if (data === null) {
+                cb('No CacheRule defined for this instance ' + this.instanceName);
+            } else {
+                const parsedData = JSON.parse(data, Helpers.JSONRegExpReviver);
+                this.manager = new CacheRuleManager(parsedData, false);
+                cb(null);
             }
-        }
-        this._rules.maxAge.push({regex: regex, maxAge: maxAge});
+        });
+
+        /*this._conn.getConnection().subscribe( this.getChannel());
+
+        this._conn.getConnection().on("message", (channel, message) => {
+            debug('message received for instance', channel, message);
+            this.onPublish();
+        });*/
     }
 
-    addNeverRule(regex: RegExp) {
-        Helpers.isNotUndefined(regex);
-        Helpers.isRegexRule(regex);
-        if(this.scan){
-            const found = this.findRegex(regex);
-            if (found!== null) {
-                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
+
+
+
+    
+    private getChannel(): string {
+        return Helpers.getConfigKey() + this.instanceName;
+    }
+
+    publish() {
+        CacheEngine.publish();
+        const stringified = JSON.stringify(this.manager.getRules(), Helpers.JSONRegExpReplacer, 2);
+        this._conn.getConnection().hset(Helpers.getConfigKey(), this.instanceName, stringified, (err) => {
+            if(err) Helpers.RedisError('while publishing config ' + stringified, err);
+            this._conn.getConnection().publish(this.getChannel(), 'PUSHED');
+        });
+    }
+
+    onPublish() {
+        this._conn.getConnection().hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
+            if (err) throw new Error('Redis error - retrieving ' + Helpers.getConfigKey());
+            if (data === null) {
+                throw new Error('Big mess');
             }
-        }
-        this._rules.never.push({regex: regex});
-    }
-
-    addAlwaysRule(regex: RegExp) {
-        Helpers.isNotUndefined(regex);
-        Helpers.isRegexRule(regex);
-        if(this.scan) {
-            const found = this.findRegex(regex);
-            if (found!== null) {
-                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
-            }
-        }
-        this._rules.never.push({regex: regex});
-    }
-
-    mergeWith(rules: CacheRules) {
-        //TODO
-    }
-
-    setDefault(strategy: string) {
-        Helpers.isStringIn(strategy, ['always', 'never']);
-        this._rules.default = strategy;
-    }
-
-    removeRule(regex: RegExp) {
-        Helpers.isNotUndefined(regex);
-        Helpers.isRegexRule(regex);
-        const found = this.findRegex(regex);
-        if (found === null) {
-            throw new Error('trying to remove a regex that is not there already');
-        }
-        this._rules[found.type].splice(found.index, 1);
-    }
-
-    removeAllMaxAgeRules(): void {
-        this._rules.maxAge = [];
-    }
-
-    removeAllNeverRules(): void {
-        this._rules.never = [];
-    }
-
-    removeAllAlwaysRules(): void {
-        this._rules.always = [];
+            const parsedData = JSON.parse(data, Helpers.JSONRegExpReviver)
+            this.manager.updateRules(parsedData);
+        });
     }
 
     getRules(): CacheRules {
-        return this._rules;
+        return this.manager.getRules();
     }
-
-    private findRegex( regex: RegExp ) {
-        ['always', 'never', 'maxAge'].forEach((type) => {
-            this._rules[type].forEach( (rule, index) => {
-                if (Helpers.SameRegex(rule.regex, regex)) {
-                    return {
-                        type: type,
-                        index: index
-                    };
-                }
-            });
-        });
-        return null;
-    }
-
+    
 }
