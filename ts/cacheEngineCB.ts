@@ -1,14 +1,13 @@
-import {Promise} from 'es6-promise';
-import {CacheRules, StorageInstance, RedisStorageConfig, StorageType} from './interfaces';
-import RedisStorageInstance from "./redis/instance";
+import {CacheRules, StorageInstanceCB, RedisStorageConfig, StorageType, CallBackBooleanParam, CallBackStringParam, CallBackStringArrayParam} from './interfaces';
+import RedisStorageInstanceCB from "./redis/instanceCB";
 import Helpers from './helpers';
 import * as nodeurl from 'url';
 import * as dbug from 'debug';
-import {Cache} from './cache';
+import {CacheCB} from './cache';
 
 const debug = dbug('simple-url-cache');
 
-class CacheEngine {
+class CacheEngineCB {
 
     static pool:any = {};
 
@@ -63,82 +62,50 @@ class CacheEngine {
             throw new Error('Only Redis is supported');
         }
 
-        if (typeof CacheEngine.pool[this.type] === 'undefined') {
-            CacheEngine.pool[this.type] = {};
-            CacheEngine.locks[this.type] = {};
+        if (typeof CacheEngineCB.pool[this.type] === 'undefined') {
+            CacheEngineCB.pool[this.type] = {};
+            CacheEngineCB.locks[this.type] = {};
         }
-        if (typeof CacheEngine.pool[this.type][instanceName] === 'undefined') {
-            CacheEngine.pool[this.type][instanceName] = {};
-            CacheEngine.locks[this.type][instanceName] = false;
+        if (typeof CacheEngineCB.pool[this.type][instanceName] === 'undefined') {
+            CacheEngineCB.pool[this.type][instanceName] = {};
+            CacheEngineCB.locks[this.type][instanceName] = false;
         }
 
     }
 
-    clearDomain(domain:string):Promise<boolean> {
-        if (typeof domain === 'undefined') {
-            domain = this.defaultDomain;
-        }
+    clearDomain(domain:string, cb: CallBackBooleanParam):void {
         Helpers.isStringDefined(domain);
-        return new Promise((resolve, reject) => {
-            const instance = this.getInstance();
-            instance.clearDomain(domain).then(() => {
-                resolve(true);
-            }, err => {
-                reject(err);
-            });
-        });
+        const instance = this.getInstance();
+        instance.clearDomain(domain, cb);
     }
 
-    clearInstance():Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            const instance = this.getInstance();
-            instance.clearCache().then( () => {
-                //delete CacheEngine.pool[storageType][instanceName];
-                resolve(true);
-            }, err => {
-                reject(err);
-            });
-        });
+    clearInstance(cb: CallBackBooleanParam) {
+        const instance = this.getInstance();
+        instance.clearCache(cb);
     }
 
-    getStoredHostnames():Promise<string[]> {
-        return new Promise((resolve, reject) => {
-            const instance = this.getInstance();
-            instance.getCachedDomains().then(domains => {
-                resolve(domains);
-            }, err => {
-                reject(err);
-            });
-        });
+    getStoredHostnames(cb: CallBackStringArrayParam) {
+        const instance = this.getInstance();
+        instance.getCachedDomains(cb);
     }
 
-    getStoredURLs(domain?:string):Promise<string[]> {
-        if (typeof domain === 'undefined') {
-            domain = this.defaultDomain;
-        }
+    getStoredURLs(domain:string, cb: CallBackStringArrayParam): void {
         Helpers.isStringDefined(domain);
-
-        return new Promise((resolve, reject) => {
-            const instance = this.getInstance();
-            instance.getCachedURLs(domain).then(urls => {
-                resolve(urls)
-            }, err => {
-                reject(err)
-            });
-        });
+        const instance = this.getInstance();
+        instance.getCachedURLs(domain, cb)
     }
 
     /**
      *
      * @param url Takes the URL, and split it in two, left side is http:   // user:pass @ host.com : 8080, right side is the relative path. Prepend forward slash is missing to the relatve path
      * The left side is used to create a subdirectory for File storage, or a collection for Redis. The Redis collection naming convention is [db_]domain if any db parameter is provided. If no db is provided, then the default domain is used to store url without hostnames.
-     * @returns {Cache}
+     * @returns {CacheStorage}
      */
-    url(url:string):Cache {
+    url(url:string):CacheCB {
 
         Helpers.isStringDefined(url);
 
-        let instance:StorageInstance;
+        let instance:StorageInstanceCB;
 
         const parsedURL = nodeurl.parse(url);
         let relativeURL = parsedURL.path;
@@ -166,23 +133,23 @@ class CacheEngine {
         }
         instance = this.getInstance();
 
-        return new Cache(domain, instance, relativeURL);
+        return new CacheCB(domain, instance, relativeURL);
     }
 
-    private getInstance(): RedisStorageInstance{
+    private getInstance(): RedisStorageInstanceCB{
 
-        if (typeof CacheEngine.pool[this.type][this.instanceName] === 'undefined') {
-            CacheEngine.pool[this.type][this.instanceName] = {};
-            CacheEngine.locks[this.type][this.instanceName] = {};
+        if (typeof CacheEngineCB.pool[this.type][this.instanceName] === 'undefined') {
+            CacheEngineCB.pool[this.type][this.instanceName] = {};
+            CacheEngineCB.locks[this.type][this.instanceName] = {};
         }
 
         if (Helpers.isRedis(this.storageConfig)) {
-            CacheEngine.pool[this.type][this.instanceName] = new RedisStorageInstance(this.instanceName, this.storageConfig, this.cacheRules);
+            CacheEngineCB.pool[this.type][this.instanceName] = new RedisStorageInstanceCB(this.instanceName, this.storageConfig, this.cacheRules);
         }
 
-        return CacheEngine.pool[this.type][this.instanceName];
+        return CacheEngineCB.pool[this.type][this.instanceName];
     }
 
 }
 
-export default CacheEngine;
+export default CacheEngineCB;

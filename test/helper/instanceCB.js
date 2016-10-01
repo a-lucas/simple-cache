@@ -6,18 +6,18 @@ var debug = require('debug')('simple-url-cache-test');
 var expect = chai.expect;
 
 
-var DELETE_DOMAIN = require('./common').DELETE_DOMAIN;
-var HAS_DOMAIN = require('./common').HAS_DOMAIN;
-var SET_URL = require('./common').SET_URL;
-var SET_URL_FALSE = require('./common').SET_URL_FALSE;
-var HAS_NOT_URL = require('./common').HAS_NOT_URL;
-var DELETE_ALL = require('./common').DELETE_ALL;
-var DELETE_URL = require('./common').DELETE_URL;
-var WAIT_HAS_NOT_URL = require('./common').WAIT_HAS_NOT_URL;
-var SET_FORCE = require('./common').SET_FORCE;
-var URL_DETAILS = require('./common').URL_DETAILS;
-var GET_URLS = require('./common').GET_URLS;
-var WAIT_GET_URLS = require('./common').WAIT_GET_URLS;
+var DELETE_DOMAIN = require('./commonCB').DELETE_DOMAIN;
+var HAS_DOMAIN = require('./commonCB').HAS_DOMAIN;
+var SET_URL = require('./commonCB').SET_URL;
+var SET_URL_FALSE = require('./commonCB').SET_URL_FALSE;
+var HAS_NOT_URL = require('./commonCB').HAS_NOT_URL;
+var DELETE_ALL = require('./commonCB').DELETE_ALL;
+var DELETE_URL = require('./commonCB').DELETE_URL;
+var WAIT_HAS_NOT_URL = require('./commonCB').WAIT_HAS_NOT_URL;
+var SET_FORCE = require('./commonCB').SET_FORCE;
+var URL_DETAILS = require('./commonCB').URL_DETAILS;
+var GET_URLS = require('./commonCB').GET_URLS;
+var WAIT_GET_URLS = require('./commonCB').WAIT_GET_URLS;
 
 module.exports = function (cacheEngine) {
 
@@ -55,7 +55,6 @@ module.exports = function (cacheEngine) {
         URL_DETAILS(urlCache2, cacheNeverURL, 'never');
 
         SET_URL_FALSE(urlCache2, html);
-        //HAS_NOT_URL(urlCache2);
 
         SET_FORCE(urlCache2, html);
 
@@ -74,7 +73,7 @@ module.exports = function (cacheEngine) {
         SET_FORCE(urlCache3, html);
 
         DELETE_URL(urlCache3);
-        ;
+
     });
 
 

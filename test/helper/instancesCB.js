@@ -6,18 +6,15 @@ var debug = require('debug')('simple-url-cache-test');
 var expect = chai.expect;
 
 
-var DELETE_DOMAIN = require('./common').DELETE_DOMAIN;
-var HAS_NOT_DOMAIN = require('./common').HAS_NOT_DOMAIN;
-var HAS_DOMAIN = require('./common').HAS_DOMAIN;
-var HAS_NOT_URL = require('./common').HAS_NOT_URL;
-var HAS_URL = require('./common').HAS_URL;
-var SET_URL = require('./common').SET_URL;
-
-
-var DELETE_ALL = require('./common').DELETE_ALL;
+var DELETE_DOMAIN = require('./commonCB').DELETE_DOMAIN;
+var HAS_NOT_DOMAIN = require('./commonCB').HAS_NOT_DOMAIN;
+var HAS_DOMAIN = require('./commonCB').HAS_DOMAIN;
+var HAS_NOT_URL = require('./commonCB').HAS_NOT_URL;
+var HAS_URL = require('./commonCB').HAS_URL;
+var SET_URL = require('./commonCB').SET_URL;
+var DELETE_ALL = require('./commonCB').DELETE_ALL;
 
 module.exports = function(instance1, instance2, instance3) {
-
 
     var cacheMaxAgeURL = 'maxAge.html';
     var cacheAlwaysURL = 'always.html';
@@ -25,8 +22,7 @@ module.exports = function(instance1, instance2, instance3) {
     var notMatchedURL = 'unmatched.html';
 
     var html = '<b>Some HTML</b>';
-
-
+    
     var urls = [
         'http://a.com/always.html',
         'http://b.com/always.html',

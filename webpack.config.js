@@ -15,7 +15,7 @@ nodeModules['path'] = 'commonjs path';
 
 
 module.exports = {
-    entry: './ts/cacheEngine.ts',
+    entry: './ts/index.ts',
     externals: nodeModules,
     target: 'node',
     output: {

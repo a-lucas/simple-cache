@@ -1,5 +1,5 @@
 
-var simpleCache = require('./../dist/redis-cache');
+var simpleCache = require('./../dist/redis-cache').CacheEnginePromise;
 var weirdUrls = require('./helper/weirdUrls');
 
 var chai = require('chai');

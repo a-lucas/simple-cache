@@ -1,7 +1,7 @@
-var simpleCache = require('./../dist/redis-cache').CacheEnginePromise;
+var simpleCache = require('./../dist/redis-cache').CacheEngineCB;
 var cacheRules = require('./helper/cacheRules');
-var instance = require('./helper/instance');
-var instances = require('./helper/instances');
+var instance = require('./helper/instanceCB');
+var instances = require('./helper/instancesCB');
 
 var storageConfig = {
     type: 'redis',

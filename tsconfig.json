@@ -15,6 +15,6 @@
     },
     "files": [
         "./typings/index.d.ts",
-        "ts/cacheEngine.ts"
+        "ts/index.ts"
     ]
 }

@@ -45,6 +45,12 @@ export default class Helpers {
         }
     }
 
+    static isBoolean(data: any) {
+        if(typeof data !== 'boolean') {
+            Helpers.invalidParameterError('This is not a boolean probably the force param missing', data);
+        }
+    }
+
     static isOptionalBoolean(data: any) {
         if (typeof data !== 'undefined' && typeof data !== 'boolean') {
             Helpers.invalidParameterError('You provided an optional boolean but this is not a boolean', data);
