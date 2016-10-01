@@ -26,7 +26,10 @@ export interface RedisStorageConfig{
     db?: string;
 }
 
-export type StorageType = 'file' | 'redis';
+export interface parsedURL {
+    domain: string,
+    relativeURL: string
+}
 
 export interface CallBackBooleanParam {
     (err: string, res: boolean): any
@@ -41,25 +44,7 @@ export interface CallBackStringArrayParam {
 }
 
 export abstract class StorageInstance {
-
-    private storageType: StorageType;
-    public type: string;
     
-    constructor(protected instanceName, config: any) {
-        if (Helpers.isRedis(config)) {
-           this.storageType = 'redis';
-        } else {
-            throw new Error('only redis is supported');
-        }
-    }
-    getStorageType(): StorageType {
-        return this.storageType;
-    }
-
-    getInstanceName(): string {
-        return this.instanceName;
-    }
-
     abstract destroy(): void;
     abstract delete(domain: string, url: string, category: string, ttl: number): Promise<boolean>;
     abstract get(domain: string, url: string, category: string, ttl: number): Promise<string>;
@@ -69,29 +54,10 @@ export abstract class StorageInstance {
     abstract clearCache(): Promise<boolean>;
     abstract clearDomain(domain: string): Promise<boolean>;
     abstract getCachedDomains(): Promise <string[]>;
-    abstract getCacheRules(): CacheRules;
     abstract getCachedURLs(domain: string): Promise <string[]>;
 }
 
 export abstract class StorageInstanceCB {
-
-    private storageType: StorageType;
-    public type: string;
-
-    constructor(protected instanceName, config: any) {
-        if (Helpers.isRedis(config)) {
-            this.storageType = 'redis';
-        } else {
-            throw new Error('only redis is supported');
-        }
-    }
-    getStorageType(): StorageType {
-        return this.storageType;
-    }
-
-    getInstanceName(): string {
-        return this.instanceName;
-    }
 
     abstract destroy(cb: CallBackBooleanParam): void;
     abstract delete(domain: string, url: string, category: string, ttl: number, cb: CallBackBooleanParam): void;
@@ -101,6 +67,5 @@ export abstract class StorageInstanceCB {
     abstract clearCache(cb: CallBackBooleanParam): void;
     abstract clearDomain(domain: string, cb: CallBackBooleanParam): void;
     abstract getCachedDomains(cb: CallBackStringArrayParam): void;
-    abstract getCacheRules(): CacheRules;
     abstract getCachedURLs(domain: string, cb: CallBackStringArrayParam): void;
 }

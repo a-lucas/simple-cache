@@ -3,7 +3,7 @@
 // Definitions by: Antoine LUCAS <https://github.com/a-lucas>
 
 declare module "redis-url-cache" {
-
+    import 'es6-promise';
 
     interface RegexRule {
         regex:RegExp
@@ -30,7 +30,26 @@ declare module "redis-url-cache" {
         db?:string;
     }
 
-    class Cache {
+
+    interface CallBackBooleanParam {
+        (err: string, res: boolean): any
+    }
+
+    interface CallBackStringParam {
+        (err: string, res: string): any
+    }
+
+    interface CallBackStringArrayParam {
+        (err: string, res: string[]): any
+    }
+
+    export class CachePromise {
+        getDomain(): string
+        getCategory(): string
+        getInstanceName(): string
+        getStorageType(): string
+        getUrl(): string
+        getTTL(): number
         /**
          * Resolve to true if exists, false if not, and rejects an Error if any
          */
@@ -46,19 +65,6 @@ declare module "redis-url-cache" {
          */
         get():Promise<string>;
 
-        getDomain():string;
-
-        getCategory():string;
-
-        getTTL(): number;
-
-        getInstanceName():string;
-
-        getStorageType():string;
-
-        getUrl():string;
-
-        
         set(html:string):Promise<boolean>;
         /**
          * Resolve to true if cached, false if lready cached, and rejects an Error if any
@@ -68,6 +74,33 @@ declare module "redis-url-cache" {
         set(html:string, force:boolean):Promise<boolean>;
     }
 
+    export class CacheCB {
+        getDomain(): string
+        getCategory(): string
+        getInstanceName(): string
+        getStorageType(): string
+        getUrl(): string
+        getTTL(): number
+
+        has(cb: CallBackBooleanParam):void;
+
+        /**
+         * returns to true if deleted, false if not there, and an Error if any
+         */
+        delete(cb: CallBackBooleanParam):void
+
+        /**
+         * Resolves to the html, Rejects undefined if not cached
+         */
+        get(cb: CallBackStringParam): void;
+
+        /**
+         * Resolve to true if cached, false if lready cached, and rejects an Error if any
+         * @param html
+         * @param force
+         */
+        set(html:string, force:boolean, cb: CallBackBooleanParam):void
+    }
 
     export class CacheEnginePromise {
         /**
@@ -101,7 +134,7 @@ declare module "redis-url-cache" {
          *
          * @returns {Cache}
          */
-        url(url:string):Cache;
+        url(url:string):CachePromise;
     }
 
     export class CacheEngineCB {
@@ -118,17 +151,17 @@ declare module "redis-url-cache" {
          *
          * @param domain If no domain is provided, then the default domain will be cleared
          */
-        clearDomain(cb: Function):void
+        clearDomain(cb: CallBackBooleanParam):void
 
-        clearDomain(domain:string, cb: Function)
+        clearDomain(domain:string, cb: CallBackBooleanParam): void
 
-        clearInstance(cb:Function): void
+        clearInstance(cb:CallBackBooleanParam): void
 
-        getStoredHostnames(cb: Function): void
+        getStoredHostnames(cb: CallBackStringArrayParam): void
 
-        getStoredURLs(cb: Function):void
+        getStoredURLs(cb: CallBackStringArrayParam):void
 
-        getStoredURLs(domain:string, cb: Function): void
+        getStoredURLs(domain:string, cb: CallBackStringArrayParam): void
 
         /**
          *
@@ -138,7 +171,7 @@ declare module "redis-url-cache" {
          *
          * @returns {Cache}
          */
-        url(url:string):Cache;
+        url(url:string):CacheCB;
     }
 
 

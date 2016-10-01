@@ -1,18 +1,19 @@
-import {StorageInstanceCB, CacheRules, RedisStorageConfig} from "./../interfaces";
+import {StorageInstanceCB} from "./../interfaces";
 import {RedisPool} from './pool'
 import * as debg from 'debug';
+import Instance from "../instance";
 const debug = debg('simple-url-cache-REDIS');
 
 export default class RedisStorageInstanceCB extends StorageInstanceCB {
 
-    private _conn:RedisPool;
+    private _conn: RedisPool;
     private hashKey;
     public type = 'cb';
 
-    constructor(instanceName, private config:RedisStorageConfig, private rules:CacheRules) {
-        super(instanceName, config);
-        this.validateStorageConfig();
-        this.hashKey = 'simple-url-cache:' + this.instanceName;
+    constructor(private instance: Instance) {
+        super();
+        this._conn = new RedisPool(instance.getRedisConfig());
+        this.hashKey = 'simple-url-cache:' + this.instance.getInstanceName();
     }
 
     clearCache(cb:Function):void {
@@ -87,10 +88,6 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
             debug('hkeys() ', this.hashKey, results);
             return cb(null, results);
         });
-    }
-
-    getCacheRules():CacheRules {
-        return this.rules;
     }
 
     getCachedURLs(domain:string, cb:Function): void {
@@ -330,11 +327,6 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
             }
 
         });
-    }
-
-
-    private validateStorageConfig() {
-        this._conn = new RedisPool(this.config);
     }
 
     private getUrlKey(domain:string, url:string):string {

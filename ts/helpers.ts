@@ -1,4 +1,5 @@
-import {RedisStorageConfig} from './interfaces';
+import {RedisStorageConfig, parsedURL} from './interfaces';
+import * as nodeurl from 'url';
 
 export default class Helpers {
 
@@ -24,6 +25,41 @@ export default class Helpers {
         });
         if(!valid) {
             Helpers.invalidParameterError('This string should contain only these values : ' + values.join(', '), input);
+        }
+    }
+
+    static parseURL(url): parsedURL {
+        Helpers.isStringDefined(url);
+
+        const parsedURL = nodeurl.parse(url);
+        let relativeURL = parsedURL.path;
+        if (!/\//.test(relativeURL)) {
+            relativeURL = '/' + relativeURL;
+        }
+        parsedURL.pathname = null;
+        parsedURL.path = null;
+        parsedURL.hash = null;
+        parsedURL.query = null;
+        parsedURL.search = null;
+
+        let domain = nodeurl.format(parsedURL);
+        if (domain === relativeURL) {
+            Helpers.invalidParameterError('invalid URL ',url);
+        }
+        return {
+            domain: domain,
+            relativeURL: relativeURL
+        };
+    }
+    
+    static isNotUndefined( ...input: any[] ) {
+        if(input.length = 0){
+            Helpers.invalidParameterError('No parameters required', input);
+        }
+        for(var i in input) {
+            if (typeof input === 'undefined') {
+                Helpers.invalidParameterError('Undefined paraneter provided at index ',i);
+            }
         }
     }
 
@@ -55,6 +91,20 @@ export default class Helpers {
         if (typeof data !== 'undefined' && typeof data !== 'boolean') {
             Helpers.invalidParameterError('You provided an optional boolean but this is not a boolean', data);
         }
+    }
+
+    static SameRegex(r1: RegExp, r2: RegExp): boolean {
+        if (r1 instanceof RegExp && r2 instanceof RegExp) {
+            var props = ["global", "multiline", "ignoreCase", "source"];
+            for (var i = 0; i < props.length; i++) {
+                var prop = props[i];
+                if (r1[prop] !== r2[prop]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     static validateCacheConfig(cacheRules) {

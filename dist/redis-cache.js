@@ -46,9 +46,9 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
-	var cacheEngine_1 = __webpack_require__(1);
-	var cacheEngineCB_1 = __webpack_require__(12);
-	module.exports.CacheEnginePromise = cacheEngine_1.default;
+	var cacheEnginePromise_1 = __webpack_require__(1);
+	var cacheEngineCB_1 = __webpack_require__(13);
+	module.exports.CacheEnginePromise = cacheEnginePromise_1.default;
 	module.exports.CacheEngineCB = cacheEngineCB_1.default;
 
 
@@ -57,136 +57,84 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
+	var __extends = (this && this.__extends) || function (d, b) {
+	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+	    function __() { this.constructor = d; }
+	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+	};
 	var es6_promise_1 = __webpack_require__(2);
-	var instance_1 = __webpack_require__(3);
-	var helpers_1 = __webpack_require__(5);
-	var nodeurl = __webpack_require__(10);
-	var dbug = __webpack_require__(6);
-	var cache_1 = __webpack_require__(11);
+	var helpers_1 = __webpack_require__(3);
+	var dbug = __webpack_require__(5);
+	var cache_1 = __webpack_require__(6);
+	var CacheEngine_1 = __webpack_require__(7);
+	var instancePromise_1 = __webpack_require__(8);
 	var debug = dbug('simple-url-cache');
-	var CacheEngine = (function () {
-	    function CacheEngine(defaultDomain, instanceName, storageConfig, cacheRules) {
-	        this.defaultDomain = defaultDomain;
-	        this.instanceName = instanceName;
-	        this.storageConfig = storageConfig;
-	        this.cacheRules = cacheRules;
-	        helpers_1.default.isStringDefined(defaultDomain);
-	        helpers_1.default.isStringDefined(instanceName);
-	        helpers_1.default.validateCacheConfig(cacheRules);
-	        if (helpers_1.default.isRedis(storageConfig)) {
-	            this.type = 'file';
-	        }
-	        else {
-	            throw new Error('Only Redis is supported');
-	        }
-	        if (typeof CacheEngine.pool[this.type] === 'undefined') {
-	            CacheEngine.pool[this.type] = {};
-	            CacheEngine.locks[this.type] = {};
-	        }
-	        if (typeof CacheEngine.pool[this.type][instanceName] === 'undefined') {
-	            CacheEngine.pool[this.type][instanceName] = {};
-	            CacheEngine.locks[this.type][instanceName] = false;
-	        }
+	var CacheEnginePromise = (function (_super) {
+	    __extends(CacheEnginePromise, _super);
+	    function CacheEnginePromise(defaultDomain, instance) {
+	        _super.call(this, defaultDomain, instance);
+	        this.storageInstance = new instancePromise_1.default(instance);
+	        this.instanceName = instance.getInstanceName();
 	    }
-	    CacheEngine.prototype.clearDomain = function (domain) {
+	    CacheEnginePromise.prototype.clearDomain = function (domain) {
 	        var _this = this;
 	        if (typeof domain === 'undefined') {
 	            domain = this.defaultDomain;
 	        }
 	        helpers_1.default.isStringDefined(domain);
 	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            var instance = _this.getInstance();
-	            instance.clearDomain(domain).then(function () {
+	            _this.storageInstance.clearDomain(domain).then(function () {
 	                resolve(true);
 	            }, function (err) {
 	                reject(err);
 	            });
 	        });
 	    };
-	    CacheEngine.prototype.clearInstance = function () {
+	    CacheEnginePromise.prototype.clearInstance = function () {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            var instance = _this.getInstance();
-	            instance.clearCache().then(function () {
+	            _this.storageInstance.clearCache().then(function () {
 	                resolve(true);
 	            }, function (err) {
 	                reject(err);
 	            });
 	        });
 	    };
-	    CacheEngine.prototype.getStoredHostnames = function () {
+	    CacheEnginePromise.prototype.getStoredHostnames = function () {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            var instance = _this.getInstance();
-	            instance.getCachedDomains().then(function (domains) {
+	            _this.storageInstance.getCachedDomains().then(function (domains) {
 	                resolve(domains);
 	            }, function (err) {
 	                reject(err);
 	            });
 	        });
 	    };
-	    CacheEngine.prototype.getStoredURLs = function (domain) {
+	    CacheEnginePromise.prototype.getStoredURLs = function (domain) {
 	        var _this = this;
 	        if (typeof domain === 'undefined') {
 	            domain = this.defaultDomain;
 	        }
 	        helpers_1.default.isStringDefined(domain);
 	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            var instance = _this.getInstance();
-	            instance.getCachedURLs(domain).then(function (urls) {
+	            _this.storageInstance.getCachedURLs(domain).then(function (urls) {
 	                resolve(urls);
 	            }, function (err) {
 	                reject(err);
 	            });
 	        });
 	    };
-	    CacheEngine.prototype.url = function (url) {
-	        helpers_1.default.isStringDefined(url);
-	        var instance;
-	        var parsedURL = nodeurl.parse(url);
-	        var relativeURL = parsedURL.path;
-	        if (!/\//.test(relativeURL)) {
-	            relativeURL = '/' + relativeURL;
+	    CacheEnginePromise.prototype.url = function (url) {
+	        var parsedURL = helpers_1.default.parseURL(url);
+	        if (parsedURL.domain.length === 0) {
+	            parsedURL.domain = this.defaultDomain;
 	        }
-	        parsedURL.pathname = null;
-	        parsedURL.path = null;
-	        parsedURL.hash = null;
-	        parsedURL.query = null;
-	        parsedURL.search = null;
-	        var domain = nodeurl.format(parsedURL);
-	        if (domain === relativeURL) {
-	            throw new Error('The url ' + url + ' is not valid');
-	        }
-	        if (domain.length === 0) {
-	            debug('This url', url, ' has no domain, using defaultDomain = ', this.defaultDomain);
-	            domain = this.defaultDomain;
-	        }
-	        else {
-	            debug('This URL ', url, ' has a domain: ', domain);
-	        }
-	        instance = this.getInstance();
-	        return new cache_1.Cache(domain, instance, relativeURL);
+	        return new cache_1.CachePromise(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
 	    };
-	    CacheEngine.prototype.getInstance = function () {
-	        if (typeof CacheEngine.pool[this.type][this.instanceName] === 'undefined') {
-	            CacheEngine.pool[this.type][this.instanceName] = {};
-	            CacheEngine.locks[this.type][this.instanceName] = {};
-	        }
-	        if (helpers_1.default.isRedis(this.storageConfig)) {
-	            CacheEngine.pool[this.type][this.instanceName] = new instance_1.default(this.instanceName, this.storageConfig, this.cacheRules);
-	        }
-	        return CacheEngine.pool[this.type][this.instanceName];
-	    };
-	    CacheEngine.pool = {};
-	    CacheEngine.locks = {};
-	    CacheEngine.helpers = {
-	        validateRedisStorageConfig: helpers_1.default.validateRedisStorageConfig,
-	        validateCacheConfig: helpers_1.default.validateCacheConfig
-	    };
-	    return CacheEngine;
-	}());
+	    return CacheEnginePromise;
+	}(CacheEngine_1.default));
 	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.default = CacheEngine;
+	exports.default = CacheEnginePromise;
 
 
 /***/ },
@@ -200,203 +148,7 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
-	var __extends = (this && this.__extends) || function (d, b) {
-	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-	    function __() { this.constructor = d; }
-	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-	};
-	var interfaces_1 = __webpack_require__(4);
-	var debg = __webpack_require__(6);
-	var debug = debg('simple-url-cache-REDIS');
-	var es6_promise_1 = __webpack_require__(2);
-	var instanceCB_1 = __webpack_require__(7);
-	var RedisStorageInstance = (function (_super) {
-	    __extends(RedisStorageInstance, _super);
-	    function RedisStorageInstance(instanceName, config, rules) {
-	        _super.call(this, instanceName, config);
-	        this.config = config;
-	        this.rules = rules;
-	        this.type = 'promise';
-	        this.hashKey = 'simple-url-cache:' + this.instanceName;
-	        this.cbInstance = new instanceCB_1.default(instanceName, config, rules);
-	    }
-	    RedisStorageInstance.prototype.clearCache = function () {
-	        var _this = this;
-	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            _this.cbInstance.clearCache(function (err, results) {
-	                if (err) {
-	                    debug(err);
-	                    reject(err);
-	                }
-	                else {
-	                    resolve(results);
-	                }
-	            });
-	        });
-	    };
-	    RedisStorageInstance.prototype.clearDomain = function (domain) {
-	        var _this = this;
-	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            _this.cbInstance.clearDomain(domain, function (err, results) {
-	                if (err) {
-	                    debug(err);
-	                    reject(err);
-	                }
-	                else {
-	                    resolve(results);
-	                }
-	            });
-	        });
-	    };
-	    RedisStorageInstance.prototype.getCachedDomains = function () {
-	        var _this = this;
-	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            debug('getAllCachedDomains called');
-	            _this.cbInstance.getCachedDomains(function (err, results) {
-	                if (err) {
-	                    debug(err);
-	                    reject(err);
-	                }
-	                else {
-	                    resolve(results);
-	                }
-	            });
-	        });
-	    };
-	    RedisStorageInstance.prototype.getCacheRules = function () {
-	        return this.rules;
-	    };
-	    RedisStorageInstance.prototype.getCachedURLs = function (domain) {
-	        var _this = this;
-	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            _this.cbInstance.getCachedURLs(domain, function (err, results) {
-	                if (err) {
-	                    debug(err);
-	                    reject(err);
-	                }
-	                else {
-	                    resolve(results);
-	                }
-	            });
-	        });
-	    };
-	    RedisStorageInstance.prototype.delete = function (domain, url, category, ttl) {
-	        var _this = this;
-	        debug('removing url cache: ', domain, url);
-	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            _this.cbInstance.delete(domain, url, category, ttl, function (err, results) {
-	                if (err) {
-	                    reject(err);
-	                }
-	                else {
-	                    resolve(results);
-	                }
-	            });
-	        });
-	    };
-	    RedisStorageInstance.prototype.destroy = function () {
-	        this._conn.kill();
-	    };
-	    RedisStorageInstance.prototype.get = function (domain, url, category, ttl) {
-	        var _this = this;
-	        debug('Retrieving url cache: ', domain, url);
-	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            _this.cbInstance.get(domain, url, category, ttl, function (err, results) {
-	                if (err) {
-	                    debug(err);
-	                    reject(err);
-	                }
-	                else {
-	                    resolve(results);
-	                }
-	            });
-	        });
-	    };
-	    RedisStorageInstance.prototype.has = function (domain, url, category, ttl) {
-	        var _this = this;
-	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            _this.cbInstance.has(domain, url, category, ttl, function (err, results) {
-	                if (err) {
-	                    debug(err);
-	                    reject(err);
-	                }
-	                else {
-	                    resolve(results);
-	                }
-	            });
-	        });
-	    };
-	    RedisStorageInstance.prototype.set = function (domain, url, value, category, ttl, force) {
-	        var _this = this;
-	        return new es6_promise_1.Promise(function (resolve, reject) {
-	            _this.cbInstance.set(domain, url, value, category, ttl, force, function (err, results) {
-	                if (err) {
-	                    debug(err);
-	                    reject(err);
-	                }
-	                else {
-	                    resolve(results);
-	                }
-	            });
-	        });
-	    };
-	    return RedisStorageInstance;
-	}(interfaces_1.StorageInstance));
-	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.default = RedisStorageInstance;
-
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	var helpers_1 = __webpack_require__(5);
-	var StorageInstance = (function () {
-	    function StorageInstance(instanceName, config) {
-	        this.instanceName = instanceName;
-	        if (helpers_1.default.isRedis(config)) {
-	            this.storageType = 'redis';
-	        }
-	        else {
-	            throw new Error('only redis is supported');
-	        }
-	    }
-	    StorageInstance.prototype.getStorageType = function () {
-	        return this.storageType;
-	    };
-	    StorageInstance.prototype.getInstanceName = function () {
-	        return this.instanceName;
-	    };
-	    return StorageInstance;
-	}());
-	exports.StorageInstance = StorageInstance;
-	var StorageInstanceCB = (function () {
-	    function StorageInstanceCB(instanceName, config) {
-	        this.instanceName = instanceName;
-	        if (helpers_1.default.isRedis(config)) {
-	            this.storageType = 'redis';
-	        }
-	        else {
-	            throw new Error('only redis is supported');
-	        }
-	    }
-	    StorageInstanceCB.prototype.getStorageType = function () {
-	        return this.storageType;
-	    };
-	    StorageInstanceCB.prototype.getInstanceName = function () {
-	        return this.instanceName;
-	    };
-	    return StorageInstanceCB;
-	}());
-	exports.StorageInstanceCB = StorageInstanceCB;
-
-
-/***/ },
-/* 5 */
-/***/ function(module, exports) {
-
-	"use strict";
+	var nodeurl = __webpack_require__(4);
 	var Helpers = (function () {
 	    function Helpers() {
 	    }
@@ -420,6 +172,41 @@ module.exports =
 	        });
 	        if (!valid) {
 	            Helpers.invalidParameterError('This string should contain only these values : ' + values.join(', '), input);
+	        }
+	    };
+	    Helpers.parseURL = function (url) {
+	        Helpers.isStringDefined(url);
+	        var parsedURL = nodeurl.parse(url);
+	        var relativeURL = parsedURL.path;
+	        if (!/\//.test(relativeURL)) {
+	            relativeURL = '/' + relativeURL;
+	        }
+	        parsedURL.pathname = null;
+	        parsedURL.path = null;
+	        parsedURL.hash = null;
+	        parsedURL.query = null;
+	        parsedURL.search = null;
+	        var domain = nodeurl.format(parsedURL);
+	        if (domain === relativeURL) {
+	            Helpers.invalidParameterError('invalid URL ', url);
+	        }
+	        return {
+	            domain: domain,
+	            relativeURL: relativeURL
+	        };
+	    };
+	    Helpers.isNotUndefined = function () {
+	        var input = [];
+	        for (var _i = 0; _i < arguments.length; _i++) {
+	            input[_i - 0] = arguments[_i];
+	        }
+	        if (input.length = 0) {
+	            Helpers.invalidParameterError('No parameters required', input);
+	        }
+	        for (var i in input) {
+	            if (typeof input === 'undefined') {
+	                Helpers.invalidParameterError('Undefined paraneter provided at index ', i);
+	            }
 	        }
 	    };
 	    Helpers.isArray = function (data) {
@@ -447,6 +234,19 @@ module.exports =
 	            Helpers.invalidParameterError('You provided an optional boolean but this is not a boolean', data);
 	        }
 	    };
+	    Helpers.SameRegex = function (r1, r2) {
+	        if (r1 instanceof RegExp && r2 instanceof RegExp) {
+	            var props = ["global", "multiline", "ignoreCase", "source"];
+	            for (var i = 0; i < props.length; i++) {
+	                var prop = props[i];
+	                if (r1[prop] !== r2[prop]) {
+	                    return false;
+	                }
+	            }
+	            return true;
+	        }
+	        return false;
+	    };
 	    Helpers.validateCacheConfig = function (cacheRules) {
 	        Helpers.isStringIn(cacheRules.default, ['always', 'never']);
 	        ['always', 'never', 'maxAge'].forEach(function (type) {
@@ -471,13 +271,19 @@ module.exports =
 
 
 /***/ },
-/* 6 */
+/* 4 */
+/***/ function(module, exports) {
+
+	module.exports = require("url");
+
+/***/ },
+/* 5 */
 /***/ function(module, exports) {
 
 	module.exports = require("debug");
 
 /***/ },
-/* 7 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -486,19 +292,341 @@ module.exports =
 	    function __() { this.constructor = d; }
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	};
-	var interfaces_1 = __webpack_require__(4);
-	var pool_1 = __webpack_require__(8);
-	var debg = __webpack_require__(6);
+	var helpers_1 = __webpack_require__(3);
+	var CacheEngine_1 = __webpack_require__(7);
+	var CacheCommon = (function () {
+	    function CacheCommon(_domain, _storageInstance, _instanceName, _url) {
+	        var _this = this;
+	        this._domain = _domain;
+	        this._instanceName = _instanceName;
+	        this._url = _url;
+	        this._category = '';
+	        this._maxAge = 0;
+	        this.getRegexTest = function (u) {
+	            return u.regex.test(_this._url);
+	        };
+	        if (this.isRedisCB(_storageInstance)) {
+	            this._storageInstanceCB = _storageInstance;
+	        }
+	        else {
+	            this._storageInstancePromise = _storageInstance;
+	        }
+	        this.setCacheCategory();
+	    }
+	    CacheCommon.prototype.isRedisCB = function (storageInstance) {
+	        return storageInstance.type === 'cb';
+	    };
+	    CacheCommon.prototype.getDomain = function () {
+	        return this._domain;
+	    };
+	    CacheCommon.prototype.getCategory = function () {
+	        return this._category;
+	    };
+	    CacheCommon.prototype.getInstanceName = function () {
+	        return this._instanceName;
+	    };
+	    CacheCommon.prototype.getUrl = function () {
+	        return this._url;
+	    };
+	    CacheCommon.prototype.getTTL = function () {
+	        return this._maxAge;
+	    };
+	    CacheCommon.prototype.setCacheCategory = function () {
+	        var i;
+	        var config = CacheEngine_1.default.instances[this._instanceName].getCacheRuleEngine().getRules();
+	        for (i in config.maxAge) {
+	            if (this.getRegexTest(config.maxAge[i]) === true) {
+	                this._category = 'maxAge';
+	                this._maxAge = config.maxAge[i].maxAge;
+	            }
+	        }
+	        for (i in config.always) {
+	            if (this.getRegexTest(config.always[i]) === true) {
+	                this._category = 'always';
+	            }
+	        }
+	        for (i in config.never) {
+	            if (this.getRegexTest(config.never[i]) === true) {
+	                this._category = 'never';
+	            }
+	        }
+	        if (this._category.length === 0) {
+	            this._category = config.default;
+	        }
+	    };
+	    ;
+	    return CacheCommon;
+	}());
+	exports.CacheCommon = CacheCommon;
+	var CachePromise = (function (_super) {
+	    __extends(CachePromise, _super);
+	    function CachePromise() {
+	        var _this = this;
+	        _super.apply(this, arguments);
+	        this.delete = function () {
+	            return _this._storageInstancePromise.delete(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
+	        };
+	        this.get = function () {
+	            return _this._storageInstancePromise.get(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
+	        };
+	        this.has = function () {
+	            return _this._storageInstancePromise.has(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
+	        };
+	        this.set = function (html, force) {
+	            helpers_1.default.isStringDefined(html);
+	            helpers_1.default.isOptionalBoolean(force);
+	            if (typeof force === 'undefined') {
+	                force = false;
+	            }
+	            return _this._storageInstancePromise.set(_this.getDomain(), _this.getUrl(), html, _this.getCategory(), _this.getTTL(), force);
+	        };
+	    }
+	    return CachePromise;
+	}(CacheCommon));
+	exports.CachePromise = CachePromise;
+	var CacheCB = (function (_super) {
+	    __extends(CacheCB, _super);
+	    function CacheCB() {
+	        var _this = this;
+	        _super.apply(this, arguments);
+	        this.delete = function (cb) {
+	            _this._storageInstanceCB.delete(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
+	        };
+	        this.get = function (cb) {
+	            _this._storageInstanceCB.get(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
+	        };
+	        this.has = function (cb) {
+	            _this._storageInstanceCB.has(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
+	        };
+	        this.set = function (html, force, cb) {
+	            helpers_1.default.isStringDefined(html);
+	            helpers_1.default.isBoolean(force);
+	            _this._storageInstanceCB.set(_this.getDomain(), _this.getUrl(), html, _this.getCategory(), _this.getTTL(), force, cb);
+	        };
+	    }
+	    return CacheCB;
+	}(CacheCommon));
+	exports.CacheCB = CacheCB;
+
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var helpers_1 = __webpack_require__(3);
+	var CacheEngine = (function () {
+	    function CacheEngine(defaultDomain, instanceDefinition) {
+	        this.defaultDomain = defaultDomain;
+	        this.instanceDefinition = instanceDefinition;
+	        helpers_1.default.isNotUndefined(defaultDomain, instanceDefinition);
+	        helpers_1.default.isStringDefined(defaultDomain);
+	        if (typeof CacheEngine.instances[instanceDefinition.getInstanceName()] !== 'undefined') {
+	            console.warn("Instance already exists: " + instanceDefinition.getInstanceName(), "RedisConfig And cacheRules are ignored");
+	            throw new Error("Instance already exists: " + instanceDefinition.getInstanceName());
+	        }
+	        else {
+	            CacheEngine.instances[instanceDefinition.getInstanceName()] = instanceDefinition;
+	        }
+	    }
+	    CacheEngine.instances = {};
+	    CacheEngine.helpers = {
+	        validateRedisStorageConfig: helpers_1.default.validateRedisStorageConfig,
+	        validateCacheConfig: helpers_1.default.validateCacheConfig
+	    };
+	    return CacheEngine;
+	}());
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.default = CacheEngine;
+
+
+/***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var __extends = (this && this.__extends) || function (d, b) {
+	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+	    function __() { this.constructor = d; }
+	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+	};
+	var interfaces_1 = __webpack_require__(9);
+	var debg = __webpack_require__(5);
+	var es6_promise_1 = __webpack_require__(2);
+	var instanceCB_1 = __webpack_require__(10);
+	var debug = debg('simple-url-cache-REDIS');
+	var RedisStorageInstancePromise = (function (_super) {
+	    __extends(RedisStorageInstancePromise, _super);
+	    function RedisStorageInstancePromise(instance) {
+	        _super.call(this);
+	        this.type = 'promise';
+	        this.hashKey = 'simple-url-cache:' + instance.getInstanceName();
+	        this.cbInstance = new instanceCB_1.default(instance);
+	    }
+	    RedisStorageInstancePromise.prototype.clearCache = function () {
+	        var _this = this;
+	        return new es6_promise_1.Promise(function (resolve, reject) {
+	            _this.cbInstance.clearCache(function (err, results) {
+	                if (err) {
+	                    debug(err);
+	                    reject(err);
+	                }
+	                else {
+	                    resolve(results);
+	                }
+	            });
+	        });
+	    };
+	    RedisStorageInstancePromise.prototype.clearDomain = function (domain) {
+	        var _this = this;
+	        return new es6_promise_1.Promise(function (resolve, reject) {
+	            _this.cbInstance.clearDomain(domain, function (err, results) {
+	                if (err) {
+	                    debug(err);
+	                    reject(err);
+	                }
+	                else {
+	                    resolve(results);
+	                }
+	            });
+	        });
+	    };
+	    RedisStorageInstancePromise.prototype.getCachedDomains = function () {
+	        var _this = this;
+	        return new es6_promise_1.Promise(function (resolve, reject) {
+	            debug('getAllCachedDomains called');
+	            _this.cbInstance.getCachedDomains(function (err, results) {
+	                if (err) {
+	                    debug(err);
+	                    reject(err);
+	                }
+	                else {
+	                    resolve(results);
+	                }
+	            });
+	        });
+	    };
+	    RedisStorageInstancePromise.prototype.getCachedURLs = function (domain) {
+	        var _this = this;
+	        return new es6_promise_1.Promise(function (resolve, reject) {
+	            _this.cbInstance.getCachedURLs(domain, function (err, results) {
+	                if (err) {
+	                    debug(err);
+	                    reject(err);
+	                }
+	                else {
+	                    resolve(results);
+	                }
+	            });
+	        });
+	    };
+	    RedisStorageInstancePromise.prototype.delete = function (domain, url, category, ttl) {
+	        var _this = this;
+	        debug('removing url cache: ', domain, url);
+	        return new es6_promise_1.Promise(function (resolve, reject) {
+	            _this.cbInstance.delete(domain, url, category, ttl, function (err, results) {
+	                if (err) {
+	                    reject(err);
+	                }
+	                else {
+	                    resolve(results);
+	                }
+	            });
+	        });
+	    };
+	    RedisStorageInstancePromise.prototype.destroy = function () {
+	        this.cbInstance.destroy();
+	    };
+	    RedisStorageInstancePromise.prototype.get = function (domain, url, category, ttl) {
+	        var _this = this;
+	        debug('Retrieving url cache: ', domain, url);
+	        return new es6_promise_1.Promise(function (resolve, reject) {
+	            _this.cbInstance.get(domain, url, category, ttl, function (err, results) {
+	                if (err) {
+	                    debug(err);
+	                    reject(err);
+	                }
+	                else {
+	                    resolve(results);
+	                }
+	            });
+	        });
+	    };
+	    RedisStorageInstancePromise.prototype.has = function (domain, url, category, ttl) {
+	        var _this = this;
+	        return new es6_promise_1.Promise(function (resolve, reject) {
+	            _this.cbInstance.has(domain, url, category, ttl, function (err, results) {
+	                if (err) {
+	                    debug(err);
+	                    reject(err);
+	                }
+	                else {
+	                    resolve(results);
+	                }
+	            });
+	        });
+	    };
+	    RedisStorageInstancePromise.prototype.set = function (domain, url, value, category, ttl, force) {
+	        var _this = this;
+	        return new es6_promise_1.Promise(function (resolve, reject) {
+	            _this.cbInstance.set(domain, url, value, category, ttl, force, function (err, results) {
+	                if (err) {
+	                    debug(err);
+	                    reject(err);
+	                }
+	                else {
+	                    resolve(results);
+	                }
+	            });
+	        });
+	    };
+	    return RedisStorageInstancePromise;
+	}(interfaces_1.StorageInstance));
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.default = RedisStorageInstancePromise;
+
+
+/***/ },
+/* 9 */
+/***/ function(module, exports) {
+
+	"use strict";
+	var StorageInstance = (function () {
+	    function StorageInstance() {
+	    }
+	    return StorageInstance;
+	}());
+	exports.StorageInstance = StorageInstance;
+	var StorageInstanceCB = (function () {
+	    function StorageInstanceCB() {
+	    }
+	    return StorageInstanceCB;
+	}());
+	exports.StorageInstanceCB = StorageInstanceCB;
+
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var __extends = (this && this.__extends) || function (d, b) {
+	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+	    function __() { this.constructor = d; }
+	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+	};
+	var interfaces_1 = __webpack_require__(9);
+	var pool_1 = __webpack_require__(11);
+	var debg = __webpack_require__(5);
 	var debug = debg('simple-url-cache-REDIS');
 	var RedisStorageInstanceCB = (function (_super) {
 	    __extends(RedisStorageInstanceCB, _super);
-	    function RedisStorageInstanceCB(instanceName, config, rules) {
-	        _super.call(this, instanceName, config);
-	        this.config = config;
-	        this.rules = rules;
+	    function RedisStorageInstanceCB(instance) {
+	        _super.call(this);
+	        this.instance = instance;
 	        this.type = 'cb';
-	        this.validateStorageConfig();
-	        this.hashKey = 'simple-url-cache:' + this.instanceName;
+	        this._conn = new pool_1.RedisPool(instance.getRedisConfig());
+	        this.hashKey = 'simple-url-cache:' + this.instance.getInstanceName();
 	    }
 	    RedisStorageInstanceCB.prototype.clearCache = function (cb) {
 	        var _this = this;
@@ -569,9 +697,6 @@ module.exports =
 	            debug('hkeys() ', _this.hashKey, results);
 	            return cb(null, results);
 	        });
-	    };
-	    RedisStorageInstanceCB.prototype.getCacheRules = function () {
-	        return this.rules;
 	    };
 	    RedisStorageInstanceCB.prototype.getCachedURLs = function (domain, cb) {
 	        var _this = this;
@@ -781,9 +906,6 @@ module.exports =
 	            }
 	        });
 	    };
-	    RedisStorageInstanceCB.prototype.validateStorageConfig = function () {
-	        this._conn = new pool_1.RedisPool(this.config);
-	    };
 	    RedisStorageInstanceCB.prototype.getUrlKey = function (domain, url) {
 	        return this.getDomainHashKey(domain) + ':' + url;
 	    };
@@ -794,12 +916,12 @@ module.exports =
 
 
 /***/ },
-/* 8 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
-	var redis = __webpack_require__(9);
-	var dbug = __webpack_require__(6);
+	var redis = __webpack_require__(12);
+	var dbug = __webpack_require__(5);
 	var debug = dbug('simple-url-cache-REDIS');
 	var RedisPool = (function () {
 	    function RedisPool(config) {
@@ -859,19 +981,13 @@ module.exports =
 
 
 /***/ },
-/* 9 */
+/* 12 */
 /***/ function(module, exports) {
 
 	module.exports = require("redis");
 
 /***/ },
-/* 10 */
-/***/ function(module, exports) {
-
-	module.exports = require("url");
-
-/***/ },
-/* 11 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -880,218 +996,42 @@ module.exports =
 	    function __() { this.constructor = d; }
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	};
-	var helpers_1 = __webpack_require__(5);
-	var CacheCommon = (function () {
-	    function CacheCommon(_domain, _config, _url, _instanceName, _storageType) {
-	        var _this = this;
-	        this._domain = _domain;
-	        this._config = _config;
-	        this._url = _url;
-	        this._instanceName = _instanceName;
-	        this._storageType = _storageType;
-	        this._category = '';
-	        this._maxAge = 0;
-	        this.getRegexTest = function (u) {
-	            return u.regex.test(_this._url);
-	        };
-	        this.setCacheCategory();
-	    }
-	    CacheCommon.prototype.getDomain = function () {
-	        return this._domain;
-	    };
-	    CacheCommon.prototype.getCategory = function () {
-	        return this._category;
-	    };
-	    CacheCommon.prototype.getInstanceName = function () {
-	        return this._instanceName;
-	    };
-	    CacheCommon.prototype.getStorageType = function () {
-	        return this._storageType;
-	    };
-	    CacheCommon.prototype.getUrl = function () {
-	        return this._url;
-	    };
-	    CacheCommon.prototype.getTTL = function () {
-	        return this._maxAge;
-	    };
-	    CacheCommon.prototype.setCacheCategory = function () {
-	        var i;
-	        for (i in this._config.maxAge) {
-	            if (this.getRegexTest(this._config.maxAge[i]) === true) {
-	                this._category = 'maxAge';
-	                this._maxAge = this._config.maxAge[i].maxAge;
-	            }
-	        }
-	        for (i in this._config.always) {
-	            if (this.getRegexTest(this._config.always[i]) === true) {
-	                this._category = 'always';
-	            }
-	        }
-	        for (i in this._config.never) {
-	            if (this.getRegexTest(this._config.never[i]) === true) {
-	                this._category = 'never';
-	            }
-	        }
-	        if (this._category.length === 0) {
-	            this._category = this._config.default;
-	        }
-	    };
-	    ;
-	    return CacheCommon;
-	}());
-	exports.CacheCommon = CacheCommon;
-	var Cache = (function (_super) {
-	    __extends(Cache, _super);
-	    function Cache(_domain, _storageInstance, _url) {
-	        var _this = this;
-	        _super.call(this, _domain, _storageInstance.getCacheRules(), _url, _storageInstance.getInstanceName(), _storageInstance.getStorageType());
-	        this._storageInstance = _storageInstance;
-	        this.delete = function () {
-	            return _this._storageInstance.delete(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
-	        };
-	        this.get = function () {
-	            return _this._storageInstance.get(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
-	        };
-	        this.has = function () {
-	            return _this._storageInstance.has(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
-	        };
-	        this.set = function (html, force) {
-	            helpers_1.default.isStringDefined(html);
-	            helpers_1.default.isOptionalBoolean(force);
-	            if (typeof force === 'undefined') {
-	                force = false;
-	            }
-	            return _this._storageInstance.set(_this.getDomain(), _this.getUrl(), html, _this.getCategory(), _this.getTTL(), force);
-	        };
-	        this._storageInstance = _storageInstance;
-	    }
-	    return Cache;
-	}(CacheCommon));
-	exports.Cache = Cache;
-	var CacheCB = (function (_super) {
-	    __extends(CacheCB, _super);
-	    function CacheCB(_domain, _storageInstance, _url) {
-	        var _this = this;
-	        _super.call(this, _domain, _storageInstance.getCacheRules(), _url, _storageInstance.getInstanceName(), _storageInstance.getStorageType());
-	        this._storageInstance = _storageInstance;
-	        this.delete = function (cb) {
-	            _this._storageInstance.delete(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
-	        };
-	        this.get = function (cb) {
-	            _this._storageInstance.get(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
-	        };
-	        this.has = function (cb) {
-	            _this._storageInstance.has(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
-	        };
-	        this.set = function (html, force, cb) {
-	            helpers_1.default.isStringDefined(html);
-	            helpers_1.default.isBoolean(force);
-	            _this._storageInstance.set(_this.getDomain(), _this.getUrl(), html, _this.getCategory(), _this.getTTL(), force, cb);
-	        };
-	    }
-	    return CacheCB;
-	}(CacheCommon));
-	exports.CacheCB = CacheCB;
-
-
-/***/ },
-/* 12 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	var instanceCB_1 = __webpack_require__(7);
-	var helpers_1 = __webpack_require__(5);
-	var nodeurl = __webpack_require__(10);
-	var dbug = __webpack_require__(6);
-	var cache_1 = __webpack_require__(11);
+	var instanceCB_1 = __webpack_require__(10);
+	var helpers_1 = __webpack_require__(3);
+	var dbug = __webpack_require__(5);
+	var cache_1 = __webpack_require__(6);
+	var CacheEngine_1 = __webpack_require__(7);
 	var debug = dbug('simple-url-cache');
-	var CacheEngineCB = (function () {
-	    function CacheEngineCB(defaultDomain, instanceName, storageConfig, cacheRules) {
-	        this.defaultDomain = defaultDomain;
-	        this.instanceName = instanceName;
-	        this.storageConfig = storageConfig;
-	        this.cacheRules = cacheRules;
-	        helpers_1.default.isStringDefined(defaultDomain);
-	        helpers_1.default.isStringDefined(instanceName);
-	        helpers_1.default.validateCacheConfig(cacheRules);
-	        if (helpers_1.default.isRedis(storageConfig)) {
-	            this.type = 'file';
-	        }
-	        else {
-	            throw new Error('Only Redis is supported');
-	        }
-	        if (typeof CacheEngineCB.pool[this.type] === 'undefined') {
-	            CacheEngineCB.pool[this.type] = {};
-	            CacheEngineCB.locks[this.type] = {};
-	        }
-	        if (typeof CacheEngineCB.pool[this.type][instanceName] === 'undefined') {
-	            CacheEngineCB.pool[this.type][instanceName] = {};
-	            CacheEngineCB.locks[this.type][instanceName] = false;
-	        }
+	var CacheEngineCB = (function (_super) {
+	    __extends(CacheEngineCB, _super);
+	    function CacheEngineCB(defaultDomain, instance) {
+	        _super.call(this, defaultDomain, instance);
+	        this.storageInstance = new instanceCB_1.default(instance);
+	        this.instanceName = instance.getInstanceName();
 	    }
 	    CacheEngineCB.prototype.clearDomain = function (domain, cb) {
 	        helpers_1.default.isStringDefined(domain);
-	        var instance = this.getInstance();
-	        instance.clearDomain(domain, cb);
+	        this.storageInstance.clearDomain(domain, cb);
 	    };
 	    CacheEngineCB.prototype.clearInstance = function (cb) {
-	        var instance = this.getInstance();
-	        instance.clearCache(cb);
+	        this.storageInstance.clearCache(cb);
 	    };
 	    CacheEngineCB.prototype.getStoredHostnames = function (cb) {
-	        var instance = this.getInstance();
-	        instance.getCachedDomains(cb);
+	        this.storageInstance.getCachedDomains(cb);
 	    };
 	    CacheEngineCB.prototype.getStoredURLs = function (domain, cb) {
 	        helpers_1.default.isStringDefined(domain);
-	        var instance = this.getInstance();
-	        instance.getCachedURLs(domain, cb);
+	        this.storageInstance.getCachedURLs(domain, cb);
 	    };
 	    CacheEngineCB.prototype.url = function (url) {
-	        helpers_1.default.isStringDefined(url);
-	        var instance;
-	        var parsedURL = nodeurl.parse(url);
-	        var relativeURL = parsedURL.path;
-	        if (!/\//.test(relativeURL)) {
-	            relativeURL = '/' + relativeURL;
+	        var parsedURL = helpers_1.default.parseURL(url);
+	        if (parsedURL.domain.length === 0) {
+	            parsedURL.domain = this.defaultDomain;
 	        }
-	        parsedURL.pathname = null;
-	        parsedURL.path = null;
-	        parsedURL.hash = null;
-	        parsedURL.query = null;
-	        parsedURL.search = null;
-	        var domain = nodeurl.format(parsedURL);
-	        if (domain === relativeURL) {
-	            throw new Error('The url ' + url + ' is not valid');
-	        }
-	        if (domain.length === 0) {
-	            debug('This url', url, ' has no domain, using defaultDomain = ', this.defaultDomain);
-	            domain = this.defaultDomain;
-	        }
-	        else {
-	            debug('This URL ', url, ' has a domain: ', domain);
-	        }
-	        instance = this.getInstance();
-	        return new cache_1.CacheCB(domain, instance, relativeURL);
-	    };
-	    CacheEngineCB.prototype.getInstance = function () {
-	        if (typeof CacheEngineCB.pool[this.type][this.instanceName] === 'undefined') {
-	            CacheEngineCB.pool[this.type][this.instanceName] = {};
-	            CacheEngineCB.locks[this.type][this.instanceName] = {};
-	        }
-	        if (helpers_1.default.isRedis(this.storageConfig)) {
-	            CacheEngineCB.pool[this.type][this.instanceName] = new instanceCB_1.default(this.instanceName, this.storageConfig, this.cacheRules);
-	        }
-	        return CacheEngineCB.pool[this.type][this.instanceName];
-	    };
-	    CacheEngineCB.pool = {};
-	    CacheEngineCB.locks = {};
-	    CacheEngineCB.helpers = {
-	        validateRedisStorageConfig: helpers_1.default.validateRedisStorageConfig,
-	        validateCacheConfig: helpers_1.default.validateCacheConfig
+	        return new cache_1.CacheCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
 	    };
 	    return CacheEngineCB;
-	}());
+	}(CacheEngine_1.default));
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.default = CacheEngineCB;
 

@@ -1,21 +1,20 @@
-import {StorageInstance, CacheRules, RedisStorageConfig} from "./../interfaces";
-import {RedisPool} from './pool'
+import {StorageInstance} from "./../interfaces";
 import * as debg from 'debug';
-const debug = debg('simple-url-cache-REDIS');
 import {Promise} from 'es6-promise';
 import RedisStorageInstanceCB from "./instanceCB";
+import Instance from "../instance";
+const debug = debg('simple-url-cache-REDIS');
 
-export default class RedisStorageInstance extends StorageInstance {
+export default class RedisStorageInstancePromise extends StorageInstance {
 
-    private _conn:RedisPool;
     private hashKey;
     private cbInstance;
     public type = 'promise';
 
-    constructor(instanceName, private config:RedisStorageConfig, private rules:CacheRules) {
-        super(instanceName, config);
-        this.hashKey = 'simple-url-cache:' + this.instanceName;
-        this.cbInstance = new RedisStorageInstanceCB(instanceName, config, rules);
+    constructor(instance: Instance) {
+        super();
+        this.hashKey = 'simple-url-cache:' + instance.getInstanceName();
+        this.cbInstance = new RedisStorageInstanceCB(instance);
     }
 
     clearCache():Promise<boolean> {
@@ -60,10 +59,6 @@ export default class RedisStorageInstance extends StorageInstance {
         });
     }
 
-    getCacheRules():CacheRules {
-        return this.rules;
-    }
-
     getCachedURLs(domain: string): Promise<string[]> {
         return new Promise((resolve, reject)=> {
             this.cbInstance.getCachedURLs(domain, (err, results) => {
@@ -97,7 +92,7 @@ export default class RedisStorageInstance extends StorageInstance {
     }
 
     destroy() {
-        this._conn.kill();
+        this.cbInstance.destroy();
     }
 
     /**

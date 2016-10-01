@@ -1,6 +1,6 @@
-import CacheEngine from './cacheEngine';
+import CacheEnginePromise from './cacheEnginePromise';
 import CacheEngineCB from './cacheEngineCB';
 
-module.exports.CacheEnginePromise = CacheEngine;
+module.exports.CacheEnginePromise = CacheEnginePromise;
 
 module.exports.CacheEngineCB = CacheEngineCB;
