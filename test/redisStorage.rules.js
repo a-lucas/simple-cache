@@ -197,9 +197,30 @@ describe('With InstanceConfig.on_publish_update = true', function () {
     });
 });
 
+describe('Testing adding/removing rules with default settings on_existing_regex = replace', function() {
 
-describe('Testing adding/removing rules', function() {
+    it('Adds a new Always rule /aaa/ without error', function() {
+        cacheRuleEngine.getManager().addAlwaysRule(/aaa/);
+    });
 
+    it('Gets all cacheRules.always should contain /aaa', function() {
+        const rules = cacheRuleEngine.getManager().getRules();
+        expect(rules.always).to.contain({regex: /aaa/});
+    });
+
+    it('Adds a new never rule /aaa/ without error', function() {
+        cacheRuleEngine.getManager().addNeverRule( /aaa/);
+    });
+
+    it('Gets all cacheRules.always should not contain /aaa', function() {
+        const rules = cacheRuleEngine.getManager().getRules();
+        expect(rules.always).to.not.contain({regex: /aaa/});
+    });
+
+    it('Gets all cacheRules.never should contain /aaa', function() {
+        const rules = cacheRuleEngine.getManager().getRules();
+        expect(rules.never).to.contain({regex: /aaa/});
+    });
 });
 
 //TODO adding, deleting, getting rules

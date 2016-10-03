@@ -526,9 +526,7 @@ module.exports =
 	        this.method = 'promise';
 	    }
 	    RedisStorageInstancePromise.prototype.getCacheRules = function () {
-	        var manager = this.instance.getCacheRuleEngine().getManager();
-	        debug('getting manager with UUID = ', manager.getUUID());
-	        return manager.getRules();
+	        return this.instance.getCacheRuleEngine().getManager().getRules();
 	    };
 	    RedisStorageInstancePromise.prototype.clearCache = function () {
 	        var _this = this;
@@ -814,9 +812,7 @@ module.exports =
 	        });
 	    };
 	    RedisStorageInstanceCB.prototype.getCacheRules = function () {
-	        var manager = this.instance.getCacheRuleEngine().getManager();
-	        debug('getting manager with UUID = ', manager.getUUID());
-	        return manager.getRules();
+	        return this.instance.getCacheRuleEngine().getManager().getRules();
 	    };
 	    RedisStorageInstanceCB.prototype.delete = function (domain, url, category, ttl, cb) {
 	        var _this = this;
@@ -1152,7 +1148,7 @@ module.exports =
 	        new pool_1.RedisPool(instanceName, redisConfig, function (err) {
 	            if (err)
 	                cb('Error connecting to REDIS: ' + err);
-	            _this.ruleEngine = new CacheRuleEngine_1.default(instanceName, function (err) {
+	            _this.ruleEngine = new CacheRuleEngine_1.default(instanceName, _this.config, function (err) {
 	                if (err)
 	                    return cb(err);
 	                _this.instanciated = true;
@@ -1192,7 +1188,7 @@ module.exports =
 	var CacheEngine_1 = __webpack_require__(7);
 	var debug = __webpack_require__(5)('simple-url-cache-RULE');
 	var CacheRuleEngine = (function () {
-	    function CacheRuleEngine(instanceName, cb) {
+	    function CacheRuleEngine(instanceName, config, cb) {
 	        var _this = this;
 	        this.instanceName = instanceName;
 	        this._conn = pool_1.RedisPool.getConnection(instanceName);
@@ -1204,7 +1200,7 @@ module.exports =
 	            }
 	            else {
 	                var parsedData = JSON.parse(data, helpers_1.default.JSONRegExpReviver);
-	                _this.manager = new CacheRuleManager_1.default(parsedData, false);
+	                _this.manager = new CacheRuleManager_1.default(parsedData, config.on_existing_regex);
 	                cb(null);
 	            }
 	        });
@@ -1249,16 +1245,11 @@ module.exports =
 
 	"use strict";
 	var helpers_1 = __webpack_require__(3);
-	var uuid = __webpack_require__(18);
 	var CacheRuleManager = (function () {
-	    function CacheRuleManager(cacheRules, scan) {
+	    function CacheRuleManager(cacheRules, option_on_existing_regex) {
 	        this.cacheRules = cacheRules;
-	        this.scan = scan;
-	        this.uuid = uuid.v1();
+	        this.option_on_existing_regex = option_on_existing_regex;
 	    }
-	    CacheRuleManager.prototype.getUUID = function () {
-	        return this.uuid;
-	    };
 	    CacheRuleManager.prototype.updateRules = function (cacheRules) {
 	        this.cacheRules = cacheRules;
 	    };
@@ -1266,35 +1257,20 @@ module.exports =
 	        helpers_1.default.isNotUndefined(regex, maxAge);
 	        helpers_1.default.isRegexRule(regex);
 	        helpers_1.default.hasMaxAge({ regex: maxAge });
-	        if (this.scan) {
-	            var found = this.findRegex(regex);
-	            if (found !== null) {
-	                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
-	            }
-	        }
-	        this.cacheRules.maxAge.push({ regex: regex, maxAge: maxAge });
+	        var found = this.findRegex(regex);
+	        this.add({ regex: regex, maxAge: maxAge }, 'maxAge', found);
 	    };
 	    CacheRuleManager.prototype.addNeverRule = function (regex) {
 	        helpers_1.default.isNotUndefined(regex);
 	        helpers_1.default.isRegexRule(regex);
-	        if (this.scan) {
-	            var found = this.findRegex(regex);
-	            if (found !== null) {
-	                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
-	            }
-	        }
-	        this.cacheRules.never.push({ regex: regex });
+	        var found = this.findRegex(regex);
+	        this.add({ regex: regex }, 'never', found);
 	    };
 	    CacheRuleManager.prototype.addAlwaysRule = function (regex) {
 	        helpers_1.default.isNotUndefined(regex);
 	        helpers_1.default.isRegexRule(regex);
-	        if (this.scan) {
-	            var found = this.findRegex(regex);
-	            if (found !== null) {
-	                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
-	            }
-	        }
-	        this.cacheRules.never.push({ regex: regex });
+	        var found = this.findRegex(regex);
+	        this.add({ regex: regex }, 'always', found);
 	    };
 	    CacheRuleManager.prototype.mergeWith = function (rules) {
 	    };
@@ -1306,10 +1282,9 @@ module.exports =
 	        helpers_1.default.isNotUndefined(regex);
 	        helpers_1.default.isRegexRule(regex);
 	        var found = this.findRegex(regex);
-	        if (found === null) {
-	            throw new Error('trying to remove a regex that is not there already');
+	        if (found !== null) {
+	            this.cacheRules[found.type].splice(found.index, 1);
 	        }
-	        this.cacheRules[found.type].splice(found.index, 1);
 	    };
 	    CacheRuleManager.prototype.removeAllMaxAgeRules = function () {
 	        this.cacheRules.maxAge = [];
@@ -1336,6 +1311,23 @@ module.exports =
 	            });
 	        });
 	        return null;
+	    };
+	    CacheRuleManager.prototype.add = function (rule, where, found) {
+	        if (found !== null) {
+	            switch (this.option_on_existing_regex) {
+	                case 'ignore':
+	                    break;
+	                case 'replace':
+	                    this.cacheRules[found.type].splice(found.index, 1);
+	                    this.cacheRules[where].push(rule);
+	                    break;
+	                case 'error':
+	                    throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
+	            }
+	        }
+	        else {
+	            this.cacheRules[where].push(rule);
+	        }
 	    };
 	    return CacheRuleManager;
 	}());
@@ -1383,12 +1375,6 @@ module.exports =
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.default = CacheRulesCreator;
 
-
-/***/ },
-/* 18 */
-/***/ function(module, exports) {
-
-	module.exports = require("node-uuid");
 
 /***/ }
 /******/ ]);

@@ -17,7 +17,7 @@ export default class Instance {
 
         new RedisPool(instanceName, redisConfig, (err) => {
             if(err) cb('Error connecting to REDIS: ' + err);
-            this.ruleEngine = new CacheRuleEngine(instanceName, (err) => {
+            this.ruleEngine = new CacheRuleEngine(instanceName, this.config, (err) => {
                 if(err) return cb(err);
                 this.instanciated = true;
                 cb();

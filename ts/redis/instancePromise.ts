@@ -18,9 +18,7 @@ export default class RedisStorageInstancePromise extends StorageInstancePromise 
     }
 
     getCacheRules(): CacheRules {
-        const manager = this.instance.getCacheRuleEngine().getManager();
-        debug('getting manager with UUID = ', manager.getUUID());
-        return manager.getRules();
+        return this.instance.getCacheRuleEngine().getManager().getRules();
     }
 
     clearCache():Promise<boolean> {

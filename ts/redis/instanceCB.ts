@@ -132,9 +132,7 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
     }
 
     getCacheRules(): CacheRules {
-        const manager = this.instance.getCacheRuleEngine().getManager();
-        debug('getting manager with UUID = ', manager.getUUID());
-        return manager.getRules();
+        return this.instance.getCacheRuleEngine().getManager().getRules();
     }
     
     /**

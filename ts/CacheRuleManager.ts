@@ -1,58 +1,35 @@
-import {CacheRules} from "./interfaces";
+import {CacheRules, option_on_existing_regex} from "./interfaces";
 import Helpers from "./helpers";
-import * as uuid from 'node-uuid';
 
 export default class CacheRuleManager {
     
-    private uuid: string;
-    
-    constructor(public cacheRules: CacheRules, private scan: boolean) {
-        this.uuid = uuid.v1();
-    }
-
-    getUUID(): string {
-        return this.uuid;
-    }
+    constructor(public cacheRules: CacheRules, private option_on_existing_regex: option_on_existing_regex) {}
 
     updateRules(cacheRules: CacheRules) {
         this.cacheRules = cacheRules;
     }
-    
+
+
     addMaxAgeRule(regex: RegExp, maxAge:number) {
         Helpers.isNotUndefined(regex, maxAge);
         Helpers.isRegexRule(regex);
         Helpers.hasMaxAge({regex: maxAge});
-        if(this.scan) {
-            const found = this.findRegex(regex);
-            if (found!== null) {
-                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
-            }
-        }
-        this.cacheRules.maxAge.push({regex: regex, maxAge: maxAge});
+        const found = this.findRegex(regex);
+        this.add({regex: regex, maxAge: maxAge}, 'maxAge', found);
     }
 
     addNeverRule(regex: RegExp) {
         Helpers.isNotUndefined(regex);
         Helpers.isRegexRule(regex);
-        if(this.scan){
-            const found = this.findRegex(regex);
-            if (found!== null) {
-                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
-            }
-        }
-        this.cacheRules.never.push({regex: regex});
+        const found = this.findRegex(regex);
+        this.add({regex: regex}, 'never', found);
     }
 
     addAlwaysRule(regex: RegExp) {
         Helpers.isNotUndefined(regex);
         Helpers.isRegexRule(regex);
-        if(this.scan) {
-            const found = this.findRegex(regex);
-            if (found!== null) {
-                throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
-            }
-        }
-        this.cacheRules.never.push({regex: regex});
+        const found = this.findRegex(regex);
+        this.add({regex: regex}, 'always', found);
     }
 
     mergeWith(rules: CacheRules) {
@@ -68,10 +45,9 @@ export default class CacheRuleManager {
         Helpers.isNotUndefined(regex);
         Helpers.isRegexRule(regex);
         const found = this.findRegex(regex);
-        if (found === null) {
-            throw new Error('trying to remove a regex that is not there already');
+        if (found !== null) {
+            this.cacheRules[found.type].splice(found.index, 1);
         }
-        this.cacheRules[found.type].splice(found.index, 1);
     }
 
     removeAllMaxAgeRules(): void {
@@ -103,4 +79,22 @@ export default class CacheRuleManager {
         });
         return null;
     }
+
+    private add(rule, where, found) {
+        if (found!== null) {
+            switch(this.option_on_existing_regex) {
+                case 'ignore':
+                    break;
+                case 'replace':
+                    this.cacheRules[found.type].splice(found.index, 1);
+                    this.cacheRules[where].push(rule);
+                    break;
+                case 'error':
+                    throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
+            }
+        } else {
+            this.cacheRules[where].push(rule);
+        }
+    }
+
 }

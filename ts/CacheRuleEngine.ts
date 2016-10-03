@@ -1,4 +1,4 @@
-import {CacheRules} from "./interfaces";
+import {CacheRules, InstanceConfig} from "./interfaces";
 import Helpers from "./helpers";
 import {RedisPool} from "./redis/pool";
 import CacheRuleManager from './CacheRuleManager';
@@ -20,7 +20,7 @@ export default class CacheRuleEngine {
      * @param instanceName
      * @param _conn
      */
-    constructor(private instanceName: string,  cb) {
+    constructor(private instanceName: string, config: InstanceConfig,  cb) {
 
         this._conn = RedisPool.getConnection(instanceName);
         this._conn.hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
@@ -29,7 +29,7 @@ export default class CacheRuleEngine {
                 cb('No CacheRule defined for this instance ' + this.instanceName);
             } else {
                 const parsedData = JSON.parse(data, Helpers.JSONRegExpReviver);
-                this.manager = new CacheRuleManager(parsedData, false);
+                this.manager = new CacheRuleManager(parsedData, config.on_existing_regex);
                 cb(null);
             }
         });
