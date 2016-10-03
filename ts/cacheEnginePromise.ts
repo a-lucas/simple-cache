@@ -83,8 +83,10 @@ class CacheEnginePromise extends CacheEngine{
             //debug('This url', url, ' has no domain, using defaultDomain = ', this.defaultDomain);
             parsedURL.domain = this.defaultDomain;
         }
-
-        return new CachePromise(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+        
+        const cache = new CachePromise(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+        this.addUrl(cache);
+        return cache;
     }
 }
 

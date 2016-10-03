@@ -9,7 +9,6 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
 
     private _conn: RedisPool;
     private hashKey;
-    public type = 'cb';
 
     constructor(public instance: Instance) {
         super();
@@ -17,6 +16,7 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
             this._conn = conn;
         });
         this.hashKey = CacheEngine.hashKey + this.instance.getInstanceName();
+        this.method = 'callback';
     }
 
     clearCache(cb:Function):void {
@@ -132,9 +132,11 @@ export default class RedisStorageInstanceCB extends StorageInstanceCB {
     }
 
     getCacheRules(): CacheRules {
-        return this.instance.getCacheRuleEngine().getRules();
+        const manager = this.instance.getCacheRuleEngine().getManager();
+        debug('getting manager with UUID = ', manager.getUUID());
+        return manager.getRules();
     }
-
+    
     /**
      *
      * DEL domain:instance:key

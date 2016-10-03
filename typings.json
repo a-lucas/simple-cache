@@ -5,5 +5,8 @@
     "node": "registry:dt/node#6.0.0+20160915134512",
     "redis": "registry:dt/redis#0.12.1+20160818110030",
     "shelljs": "registry:dt/shelljs#0.0.0+20160526131156"
+  },
+  "dependencies": {
+    "node-uuid": "registry:npm/node-uuid#1.4.7+20160723033700"
   }
 }

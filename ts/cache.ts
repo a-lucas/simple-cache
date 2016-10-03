@@ -1,4 +1,4 @@
-import { RegexRule, StorageInstance, StorageInstanceCB, CacheRules, CallBackBooleanParam, CallBackStringParam} from './interfaces';
+import { RegexRule, StorageInstancePromise, StorageInstanceCB, CacheRules, CallBackBooleanParam, CallBackStringParam} from './interfaces';
 import Helpers from  './helpers';
 import {Promise} from 'es6-promise';
 import CacheEngine from "./CacheEngine";
@@ -14,21 +14,21 @@ export class CacheCommon {
     private _maxAge:number = 0;
     protected _storageInstanceCB: RedisStorageInstanceCB;
     protected _storageInstancePromise: RedisStorageInstancePromise;
-    protected _storageType: string;
+    protected _storageInstance: RedisStorageInstanceCB | RedisStorageInstancePromise;
 
     constructor( private _domain: string, _storageInstance: RedisStorageInstanceCB | RedisStorageInstancePromise, protected _instanceName: string,  private _url: string ) {
-        if(this.isRedisCB(_storageInstance)) {
-            this._storageType = 'callback';
-            this._storageInstanceCB = _storageInstance;
-        } else {
-            this._storageType = 'promise';
+        if(this.hasPromise(_storageInstance)) {
             this._storageInstancePromise = _storageInstance;
+            this._storageInstance = _storageInstance;
+        } else {
+            this._storageInstanceCB = _storageInstance;
+            this._storageInstance = _storageInstance;
         }
         this.setCacheCategory();
     }
 
-    private isRedisCB(storageInstance: RedisStorageInstanceCB | RedisStorageInstancePromise): storageInstance is RedisStorageInstanceCB {
-        return (<RedisStorageInstanceCB>storageInstance).type === 'cb';
+    protected hasPromise(storageInstance: RedisStorageInstanceCB | RedisStorageInstancePromise): storageInstance is RedisStorageInstancePromise {
+        return (<RedisStorageInstancePromise>storageInstance).getMethod() === 'promise';
     }
 
     /**
@@ -64,16 +64,10 @@ export class CacheCommon {
     };
 
     public setCacheCategory(): void  {
-        let i, config;
-        if(this._storageType === 'callback') {
-             config = this._storageInstanceCB.instance.ruleEngine.manager.cacheRules;
-        } else {
-            //const config = this._storageInstancePromise.getCacheRules();
-        }
+        let i;
+        const config = this._storageInstance.getCacheRules();
+
         debug('setCacheCategory Called with config ', config);
-
-
-        //const config = this._storageInstanceCB.getCacheRules();
 
         for (i in config.maxAge) {
             if (this.getRegexTest (config.maxAge[i]) === true) {

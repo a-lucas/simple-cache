@@ -1,14 +1,11 @@
 import Helpers from "./helpers";
-import {RedisStorageConfig} from "./interfaces";
-import RedisStorageInstanceCB from "./redis/instanceCB";
 import Instance from "./instance";
-import RedisStorageInstancePromise from "./redis/instancePromise";
+import {CacheCommon} from "./cache";
+const debug = require('debug')('simple-url-cache');
 
 export default class CacheEngine {
 
-    protected instance: RedisStorageInstancePromise | RedisStorageInstanceCB;
-
-    static instances = {};
+    static urls = {};
 
     static helpers = {
         validateRedisStorageConfig: Helpers.validateRedisStorageConfig,
@@ -18,6 +15,7 @@ export default class CacheEngine {
     static hashKey: string = 'url-cache:';
 
     protected instanceName: string;
+
     /**
      *
      * @param defaultDomain This is the default domain when the url doesn't contain any host information.
@@ -51,48 +49,40 @@ export default class CacheEngine {
     constructor(protected defaultDomain:string, protected instanceDefinition: Instance) {
         Helpers.isNotUndefined(defaultDomain, instanceDefinition);
         Helpers.isStringDefined(defaultDomain);
-        if(typeof CacheEngine.instances[instanceDefinition.getInstanceName()] !== 'undefined') {
-            console.warn("Instance already exists: " + instanceDefinition.getInstanceName(), "RedisConfig And cacheRules are ignored");
-            //throw new Error("Instance already exists: " + instanceDefinition.getInstanceName());
-        } else {
-            CacheEngine.instances[instanceDefinition.getInstanceName()] = instanceDefinition
+        if( instanceDefinition.isInstanciated() === false) {
+            const errorMsg = 'This instance hasn\'t initiated correctly: ' + instanceDefinition.getInstanceName();
+            console.error(errorMsg)
+            throw new Error(errorMsg);
         }
         this.instanceName = instanceDefinition.getInstanceName();
+
+        if( instanceDefinition.getConfig().on_publish_update === true && typeof CacheEngine.urls[this.instanceName] === 'undefined') {
+            CacheEngine.urls[this.instanceName] = {};
+        }
+
     }
 
-    static urls = [];
-
-    protected addUrl(url) {
-        CacheEngine.urls.push(url);
-    }
-
-    static publish() {
-        CacheEngine.urls.forEach( url => {
-            url.setCacheCategory();
-        })
-    }
-
-    /**
-     * Way of storing instance rule config
-     *
-     * HASH for default values
-     *
-     * redis-url-cache:instances  name1 always name2 never ....
-     *
-     * 4 HASHES per instances
-     *
-     * url-cache:rule-config:name1:always /domain1/ /url/ /domain2/ /url/ and so on*
-     * url-cache:rule-config:name1:never  same
-     * url-cache:rule-config:name1:maxAge /domain1/ /url/ /domain2/ /url/ and so on*
-     * url-cache:rule-config:name1:maxAgeTTL /domain1/:/url/ "3600"
-     *
-     */
-
-    get cacheRulesManager() {
-        return this.instanceDefinition.ruleEngine.manager;
+    static updateAllUrlCategory(instanceName: string) {
+        Helpers.isStringDefined(instanceName);
+        if ( typeof CacheEngine.urls[instanceName] !== 'undefined' )  {
+            let key;
+            for(key in CacheEngine.urls[instanceName]) {
+                CacheEngine.urls[instanceName][key].setCacheCategory();
+            }
+        }
     }
 
     getInstanceName() : string {
         return this.instanceName;
+    }
+
+    protected addUrl(url: CacheCommon) {
+        if ( typeof CacheEngine.urls[this.instanceName] !== 'undefined' && typeof CacheEngine.urls[this.instanceName][this.buildURLIndex(url)] === 'undefined')  {
+            CacheEngine.urls[this.instanceName][this.buildURLIndex(url)] = url;
+        }
+    }
+
+    private buildURLIndex(url: CacheCommon) {
+        return this.instanceName + '_' + url.getDomain() + '_'  + url.getUrl();
     }
 }

@@ -50,9 +50,9 @@ class CacheEngineCB extends CacheEngine{
             parsedURL.domain = this.defaultDomain;
         }
 
-        let urll  = new CacheCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
-        CacheEngine.urls.push(urll);
-        return urll;
+        let cache  = new CacheCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+        this.addUrl(cache);
+        return cache;
     }
 
 }

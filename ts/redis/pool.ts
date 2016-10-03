@@ -8,51 +8,62 @@ export class RedisPool {
 
     static _pool = {};
 
-    static _isOnline = {}
+    static _status = {}
 
     private instanceName: string;
 
-    static connect(instanceName: string, config: RedisStorageConfig, cb:Function): redis.RedisClient {
-        if (typeof RedisPool._pool[instanceName] === 'undefined' || RedisPool._pool[instanceName] === null || !RedisPool._isOnline[instanceName]) {
+    static connect(instanceName: string, config: RedisStorageConfig, cb:Function): void {
+        if (
+            typeof RedisPool._pool[instanceName] === 'undefined' ||
+            RedisPool._pool[instanceName] === null ||
+            RedisPool._status[instanceName] === 'undefined' ||
+            !RedisPool._status[instanceName].online
+        ) {
             debug('This redis connection has never been instanciated before', instanceName);
-            RedisPool._isOnline[instanceName] = false;
+            RedisPool._status[instanceName] = {
+                online: false,
+                lastError: null,
+                warnings: []
+            };
 
             RedisPool._pool[instanceName] = redis.createClient(config);
 
             RedisPool._pool[instanceName].on('connect', () => {
-                RedisPool._isOnline[instanceName] = true;
+                RedisPool._status[instanceName].online = true;
                 debug('redis connected');
                 cb(null);
             });
 
             RedisPool._pool[instanceName].on('error', (e) => {
                 debug(e);
-                RedisPool._isOnline[instanceName] = false;
-                RedisPool._pool[instanceName] = null;
+                RedisPool._status[instanceName].lastError = e;
+                //RedisPool._pool[instanceName] = null;
                 cb(e);
             });
 
             RedisPool._pool[instanceName].on('end', () => {
                 RedisPool._pool[instanceName] = null;
-                RedisPool._isOnline[instanceName] = false;
+                RedisPool._status[instanceName].online = false;
                 console.warn('Redis Connection closed for instance ' + instanceName);
                 debug('Connection closed', instanceName);
             });
 
             RedisPool._pool[instanceName].on('warning', (msg) => {
                 console.warn('Redis warning for instance '+instanceName+ '. MSG = ', msg);
+                RedisPool._status[instanceName].warnings.push(msg);
                 debug('Warning called: ', instanceName, msg);
             });
+        } else {
+            cb();
         }
-        return RedisPool._pool[instanceName];
     }
 
     static isOnline(instanceName): boolean {
-        return RedisPool._isOnline[instanceName];
+        return RedisPool._status[instanceName].online;
     }
 
     static kill(instanceName){
-        if (RedisPool._isOnline[instanceName] === true) {
+        if (RedisPool._status[instanceName].online === true) {
             RedisPool._pool[instanceName].end();
         }
     }
@@ -60,7 +71,9 @@ export class RedisPool {
     constructor(instanceName: string, config: RedisStorageConfig, cb?:Function) {
         this.instanceName = instanceName;
         RedisPool.connect(instanceName, config, (err) => {
-            if(err) cb(err);
+            debug('redisPool.connect CB called');
+            if(err) return cb(err);
+            return cb();
         });
     }
 
@@ -68,12 +81,19 @@ export class RedisPool {
         return RedisPool._pool[this.instanceName];
     }
 
+    static getConnection(instanceName: string): redis.RedisClient {
+        if ( RedisPool._status[instanceName].online ) {
+            return RedisPool._pool[instanceName];
+        }
+        debug('Redis Pool isn\'t online yet')
+    }
+
     isOnline():boolean {
-        return RedisPool._isOnline[this.instanceName];
+        return RedisPool._status[this.instanceName].online;
     }
 
     kill() {
-        if (RedisPool._isOnline[this.instanceName] === true) {
+        if (RedisPool._status[this.instanceName].online === true) {
             RedisPool._pool[this.instanceName].end();
         }
     }

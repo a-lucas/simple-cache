@@ -1,21 +1,32 @@
-import {CacheRules, RedisStorageConfig} from "./interfaces";
+import {RedisStorageConfig, InstanceConfig} from "./interfaces";
 import CacheRuleEngine from "./CacheRuleEngine";
 import Helpers from "./helpers";
 import {RedisPool} from "./redis/pool";
-
+const debug = require('debug')('simple-url-cache');
 
 export default class Instance {
     public ruleEngine:CacheRuleEngine;
-    private _conn: RedisPool;
+    private instanciated: boolean = false;
 
-    constructor(private instanceName: string, private redisConfig: RedisStorageConfig, cb: Function){
-        this._conn = new RedisPool(instanceName, redisConfig, (err) => {
-            if(err) throw new Error('Error connecting to REDIS');
+    constructor(private instanceName: string,
+                private redisConfig: RedisStorageConfig,
+                private config: InstanceConfig = {on_existing_regex: 'replace', on_publish_update: false  },
+                cb: Function){
+
+        Helpers.isNotUndefined(instanceName, redisConfig, config, cb);
+
+        new RedisPool(instanceName, redisConfig, (err) => {
+            if(err) cb('Error connecting to REDIS: ' + err);
+            this.ruleEngine = new CacheRuleEngine(instanceName, (err) => {
+                if(err) return cb(err);
+                this.instanciated = true;
+                cb();
+            });
         });
-        this.ruleEngine = new CacheRuleEngine(instanceName, this._conn, false, (err) => {
-            if(err) return cb(err);
-            cb();
-        });
+    }
+
+    getConfig(): InstanceConfig {
+        return this.config;
     }
 
     getInstanceName():string {
@@ -28,6 +39,10 @@ export default class Instance {
 
     getRedisConfig(): RedisStorageConfig {
         return this.redisConfig;
+    }
+
+    isInstanciated(): boolean {
+        return this.instanciated;
     }
 
 }

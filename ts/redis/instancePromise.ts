@@ -1,24 +1,26 @@
-import {StorageInstance, CacheRules} from "./../interfaces";
+import {StorageInstancePromise, CacheRules} from "./../interfaces";
 import * as debg from 'debug';
 import {Promise} from 'es6-promise';
 import RedisStorageInstanceCB from "./instanceCB";
 import Instance from "../instance";
 const debug = debg('simple-url-cache-REDIS');
 
-export default class RedisStorageInstancePromise extends StorageInstance {
+export default class RedisStorageInstancePromise extends StorageInstancePromise {
 
     private hashKey;
     private cbInstance;
-    public type = 'promise';
 
     constructor(private instance: Instance) {
         super();
         this.hashKey = 'simple-url-cache:' + instance.getInstanceName();
         this.cbInstance = new RedisStorageInstanceCB(instance);
+        this.method = 'promise';
     }
 
     getCacheRules(): CacheRules {
-        return this.instance.getCacheRuleEngine().getRules();
+        const manager = this.instance.getCacheRuleEngine().getManager();
+        debug('getting manager with UUID = ', manager.getUUID());
+        return manager.getRules();
     }
 
     clearCache():Promise<boolean> {
@@ -166,5 +168,4 @@ export default class RedisStorageInstancePromise extends StorageInstance {
             });
         });
     }
-
 }

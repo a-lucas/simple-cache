@@ -3,13 +3,15 @@ import Helpers from "./helpers";
 import {RedisPool} from "./redis/pool";
 import CacheRuleManager from './CacheRuleManager';
 import CacheEngine from "./CacheEngine";
+import * as redis from 'redis';
 
 const debug = require('debug')('simple-url-cache-RULE');
 
 export default class CacheRuleEngine {
 
-   public manager: CacheRuleManager;
+   protected manager: CacheRuleManager;
 
+    private _conn: redis.RedisClient;
 
     /**
      * 
@@ -17,11 +19,11 @@ export default class CacheRuleEngine {
      * 
      * @param instanceName
      * @param _conn
-     * @param scan
      */
-    constructor(private instanceName: string, private _conn: RedisPool, private scan: boolean = true, cb) {
+    constructor(private instanceName: string,  cb) {
 
-        this._conn.getConnection().hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
+        this._conn = RedisPool.getConnection(instanceName);
+        this._conn.hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
             if (err) throw new Error('Redis error - retrieving ' + Helpers.getConfigKey() + ' -> ' + err);
             if (data === null) {
                 cb('No CacheRule defined for this instance ' + this.instanceName);
@@ -40,25 +42,23 @@ export default class CacheRuleEngine {
         });*/
     }
 
-
-
-
-    
     private getChannel(): string {
         return Helpers.getConfigKey() + this.instanceName;
     }
 
     publish() {
-        CacheEngine.publish();
+
+        CacheEngine.updateAllUrlCategory(this.instanceName);
+
         const stringified = JSON.stringify(this.manager.getRules(), Helpers.JSONRegExpReplacer, 2);
-        this._conn.getConnection().hset(Helpers.getConfigKey(), this.instanceName, stringified, (err) => {
+        this._conn.hset(Helpers.getConfigKey(), this.instanceName, stringified, (err) => {
             if(err) Helpers.RedisError('while publishing config ' + stringified, err);
-            this._conn.getConnection().publish(this.getChannel(), 'PUSHED');
+            this._conn.publish(this.getChannel(), 'PUSHED');
         });
     }
 
     onPublish() {
-        this._conn.getConnection().hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
+        this._conn.hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
             if (err) throw new Error('Redis error - retrieving ' + Helpers.getConfigKey());
             if (data === null) {
                 throw new Error('Big mess');
@@ -68,8 +68,8 @@ export default class CacheRuleEngine {
         });
     }
 
-    getRules(): CacheRules {
-        return this.manager.getRules();
+    getManager(): CacheRuleManager {
+        return this.manager;
     }
     
 }

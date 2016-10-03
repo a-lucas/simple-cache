@@ -68,9 +68,9 @@ module.exports =
 	};
 	var es6_promise_1 = __webpack_require__(2);
 	var helpers_1 = __webpack_require__(3);
-	var dbug = __webpack_require__(6);
-	var cache_1 = __webpack_require__(7);
-	var CacheEngine_1 = __webpack_require__(5);
+	var dbug = __webpack_require__(5);
+	var cache_1 = __webpack_require__(6);
+	var CacheEngine_1 = __webpack_require__(7);
 	var instancePromise_1 = __webpack_require__(8);
 	var debug = dbug('simple-url-cache');
 	var CacheEnginePromise = (function (_super) {
@@ -132,7 +132,9 @@ module.exports =
 	        if (parsedURL.domain.length === 0) {
 	            parsedURL.domain = this.defaultDomain;
 	        }
-	        return new cache_1.CachePromise(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+	        var cache = new cache_1.CachePromise(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+	        this.addUrl(cache);
+	        return cache;
 	    };
 	    return CacheEnginePromise;
 	}(CacheEngine_1.default));
@@ -305,63 +307,12 @@ module.exports =
 
 /***/ },
 /* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	var helpers_1 = __webpack_require__(3);
-	var CacheEngine = (function () {
-	    function CacheEngine(defaultDomain, instanceDefinition) {
-	        this.defaultDomain = defaultDomain;
-	        this.instanceDefinition = instanceDefinition;
-	        helpers_1.default.isNotUndefined(defaultDomain, instanceDefinition);
-	        helpers_1.default.isStringDefined(defaultDomain);
-	        if (typeof CacheEngine.instances[instanceDefinition.getInstanceName()] !== 'undefined') {
-	            console.warn("Instance already exists: " + instanceDefinition.getInstanceName(), "RedisConfig And cacheRules are ignored");
-	        }
-	        else {
-	            CacheEngine.instances[instanceDefinition.getInstanceName()] = instanceDefinition;
-	        }
-	        this.instanceName = instanceDefinition.getInstanceName();
-	    }
-	    CacheEngine.prototype.addUrl = function (url) {
-	        CacheEngine.urls.push(url);
-	    };
-	    CacheEngine.publish = function () {
-	        CacheEngine.urls.forEach(function (url) {
-	            url.setCacheCategory();
-	        });
-	    };
-	    Object.defineProperty(CacheEngine.prototype, "cacheRulesManager", {
-	        get: function () {
-	            return this.instanceDefinition.ruleEngine.manager;
-	        },
-	        enumerable: true,
-	        configurable: true
-	    });
-	    CacheEngine.prototype.getInstanceName = function () {
-	        return this.instanceName;
-	    };
-	    CacheEngine.instances = {};
-	    CacheEngine.helpers = {
-	        validateRedisStorageConfig: helpers_1.default.validateRedisStorageConfig,
-	        validateCacheConfig: helpers_1.default.validateCacheConfig
-	    };
-	    CacheEngine.hashKey = 'url-cache:';
-	    CacheEngine.urls = [];
-	    return CacheEngine;
-	}());
-	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.default = CacheEngine;
-
-
-/***/ },
-/* 6 */
 /***/ function(module, exports) {
 
 	module.exports = require("debug");
 
 /***/ },
-/* 7 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -371,7 +322,7 @@ module.exports =
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	};
 	var helpers_1 = __webpack_require__(3);
-	var debug = __webpack_require__(6)('simple-url-cache');
+	var debug = __webpack_require__(5)('simple-url-cache');
 	var CacheCommon = (function () {
 	    function CacheCommon(_domain, _storageInstance, _instanceName, _url) {
 	        var _this = this;
@@ -383,18 +334,18 @@ module.exports =
 	        this.getRegexTest = function (u) {
 	            return u.regex.test(_this._url);
 	        };
-	        if (this.isRedisCB(_storageInstance)) {
-	            this._storageType = 'callback';
-	            this._storageInstanceCB = _storageInstance;
+	        if (this.hasPromise(_storageInstance)) {
+	            this._storageInstancePromise = _storageInstance;
+	            this._storageInstance = _storageInstance;
 	        }
 	        else {
-	            this._storageType = 'promise';
-	            this._storageInstancePromise = _storageInstance;
+	            this._storageInstanceCB = _storageInstance;
+	            this._storageInstance = _storageInstance;
 	        }
 	        this.setCacheCategory();
 	    }
-	    CacheCommon.prototype.isRedisCB = function (storageInstance) {
-	        return storageInstance.type === 'cb';
+	    CacheCommon.prototype.hasPromise = function (storageInstance) {
+	        return storageInstance.getMethod() === 'promise';
 	    };
 	    CacheCommon.prototype.check = function () {
 	        this.setCacheCategory();
@@ -416,12 +367,8 @@ module.exports =
 	        return this._maxAge;
 	    };
 	    CacheCommon.prototype.setCacheCategory = function () {
-	        var i, config;
-	        if (this._storageType === 'callback') {
-	            config = this._storageInstanceCB.instance.ruleEngine.manager.cacheRules;
-	        }
-	        else {
-	        }
+	        var i;
+	        var config = this._storageInstance.getCacheRules();
 	        debug('setCacheCategory Called with config ', config);
 	        for (i in config.maxAge) {
 	            if (this.getRegexTest(config.maxAge[i]) === true) {
@@ -500,6 +447,61 @@ module.exports =
 
 
 /***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var helpers_1 = __webpack_require__(3);
+	var debug = __webpack_require__(5)('simple-url-cache');
+	var CacheEngine = (function () {
+	    function CacheEngine(defaultDomain, instanceDefinition) {
+	        this.defaultDomain = defaultDomain;
+	        this.instanceDefinition = instanceDefinition;
+	        helpers_1.default.isNotUndefined(defaultDomain, instanceDefinition);
+	        helpers_1.default.isStringDefined(defaultDomain);
+	        if (instanceDefinition.isInstanciated() === false) {
+	            var errorMsg = 'This instance hasn\'t initiated correctly: ' + instanceDefinition.getInstanceName();
+	            console.error(errorMsg);
+	            throw new Error(errorMsg);
+	        }
+	        this.instanceName = instanceDefinition.getInstanceName();
+	        if (instanceDefinition.getConfig().on_publish_update === true && typeof CacheEngine.urls[this.instanceName] === 'undefined') {
+	            CacheEngine.urls[this.instanceName] = {};
+	        }
+	    }
+	    CacheEngine.updateAllUrlCategory = function (instanceName) {
+	        helpers_1.default.isStringDefined(instanceName);
+	        if (typeof CacheEngine.urls[instanceName] !== 'undefined') {
+	            var key = void 0;
+	            for (key in CacheEngine.urls[instanceName]) {
+	                CacheEngine.urls[instanceName][key].setCacheCategory();
+	            }
+	        }
+	    };
+	    CacheEngine.prototype.getInstanceName = function () {
+	        return this.instanceName;
+	    };
+	    CacheEngine.prototype.addUrl = function (url) {
+	        if (typeof CacheEngine.urls[this.instanceName] !== 'undefined' && typeof CacheEngine.urls[this.instanceName][this.buildURLIndex(url)] === 'undefined') {
+	            CacheEngine.urls[this.instanceName][this.buildURLIndex(url)] = url;
+	        }
+	    };
+	    CacheEngine.prototype.buildURLIndex = function (url) {
+	        return this.instanceName + '_' + url.getDomain() + '_' + url.getUrl();
+	    };
+	    CacheEngine.urls = {};
+	    CacheEngine.helpers = {
+	        validateRedisStorageConfig: helpers_1.default.validateRedisStorageConfig,
+	        validateCacheConfig: helpers_1.default.validateCacheConfig
+	    };
+	    CacheEngine.hashKey = 'url-cache:';
+	    return CacheEngine;
+	}());
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.default = CacheEngine;
+
+
+/***/ },
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -510,7 +512,7 @@ module.exports =
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	};
 	var interfaces_1 = __webpack_require__(9);
-	var debg = __webpack_require__(6);
+	var debg = __webpack_require__(5);
 	var es6_promise_1 = __webpack_require__(2);
 	var instanceCB_1 = __webpack_require__(10);
 	var debug = debg('simple-url-cache-REDIS');
@@ -519,12 +521,14 @@ module.exports =
 	    function RedisStorageInstancePromise(instance) {
 	        _super.call(this);
 	        this.instance = instance;
-	        this.type = 'promise';
 	        this.hashKey = 'simple-url-cache:' + instance.getInstanceName();
 	        this.cbInstance = new instanceCB_1.default(instance);
+	        this.method = 'promise';
 	    }
 	    RedisStorageInstancePromise.prototype.getCacheRules = function () {
-	        return this.instance.getCacheRuleEngine().getRules();
+	        var manager = this.instance.getCacheRuleEngine().getManager();
+	        debug('getting manager with UUID = ', manager.getUUID());
+	        return manager.getRules();
 	    };
 	    RedisStorageInstancePromise.prototype.clearCache = function () {
 	        var _this = this;
@@ -641,7 +645,7 @@ module.exports =
 	        });
 	    };
 	    return RedisStorageInstancePromise;
-	}(interfaces_1.StorageInstance));
+	}(interfaces_1.StorageInstancePromise));
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.default = RedisStorageInstancePromise;
 
@@ -651,17 +655,34 @@ module.exports =
 /***/ function(module, exports) {
 
 	"use strict";
+	var __extends = (this && this.__extends) || function (d, b) {
+	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+	    function __() { this.constructor = d; }
+	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+	};
 	var StorageInstance = (function () {
 	    function StorageInstance() {
 	    }
+	    StorageInstance.prototype.getMethod = function () {
+	        return this.method;
+	    };
 	    return StorageInstance;
 	}());
-	exports.StorageInstance = StorageInstance;
-	var StorageInstanceCB = (function () {
+	var StorageInstancePromise = (function (_super) {
+	    __extends(StorageInstancePromise, _super);
+	    function StorageInstancePromise() {
+	        _super.apply(this, arguments);
+	    }
+	    return StorageInstancePromise;
+	}(StorageInstance));
+	exports.StorageInstancePromise = StorageInstancePromise;
+	var StorageInstanceCB = (function (_super) {
+	    __extends(StorageInstanceCB, _super);
 	    function StorageInstanceCB() {
+	        _super.apply(this, arguments);
 	    }
 	    return StorageInstanceCB;
-	}());
+	}(StorageInstance));
 	exports.StorageInstanceCB = StorageInstanceCB;
 
 
@@ -677,8 +698,8 @@ module.exports =
 	};
 	var interfaces_1 = __webpack_require__(9);
 	var pool_1 = __webpack_require__(11);
-	var debg = __webpack_require__(6);
-	var CacheEngine_1 = __webpack_require__(5);
+	var debg = __webpack_require__(5);
+	var CacheEngine_1 = __webpack_require__(7);
 	var debug = debg('simple-url-cache-REDIS');
 	var RedisStorageInstanceCB = (function (_super) {
 	    __extends(RedisStorageInstanceCB, _super);
@@ -686,11 +707,11 @@ module.exports =
 	        var _this = this;
 	        _super.call(this);
 	        this.instance = instance;
-	        this.type = 'cb';
 	        new pool_1.RedisPool(instance.getInstanceName(), instance.getRedisConfig(), function (err, conn) {
 	            _this._conn = conn;
 	        });
 	        this.hashKey = CacheEngine_1.default.hashKey + this.instance.getInstanceName();
+	        this.method = 'callback';
 	    }
 	    RedisStorageInstanceCB.prototype.clearCache = function (cb) {
 	        var _this = this;
@@ -793,7 +814,9 @@ module.exports =
 	        });
 	    };
 	    RedisStorageInstanceCB.prototype.getCacheRules = function () {
-	        return this.instance.getCacheRuleEngine().getRules();
+	        var manager = this.instance.getCacheRuleEngine().getManager();
+	        debug('getting manager with UUID = ', manager.getUUID());
+	        return manager.getRules();
 	    };
 	    RedisStorageInstanceCB.prototype.delete = function (domain, url, category, ttl, cb) {
 	        var _this = this;
@@ -969,66 +992,83 @@ module.exports =
 
 	"use strict";
 	var redis = __webpack_require__(12);
-	var dbug = __webpack_require__(6);
+	var dbug = __webpack_require__(5);
 	var debug = dbug('simple-url-cache-REDIS');
 	var RedisPool = (function () {
 	    function RedisPool(instanceName, config, cb) {
 	        this.instanceName = instanceName;
 	        RedisPool.connect(instanceName, config, function (err) {
+	            debug('redisPool.connect CB called');
 	            if (err)
-	                cb(err);
+	                return cb(err);
+	            return cb();
 	        });
 	    }
 	    RedisPool.connect = function (instanceName, config, cb) {
-	        if (typeof RedisPool._pool[instanceName] === 'undefined' || RedisPool._pool[instanceName] === null || !RedisPool._isOnline[instanceName]) {
+	        if (typeof RedisPool._pool[instanceName] === 'undefined' ||
+	            RedisPool._pool[instanceName] === null ||
+	            RedisPool._status[instanceName] === 'undefined' ||
+	            !RedisPool._status[instanceName].online) {
 	            debug('This redis connection has never been instanciated before', instanceName);
-	            RedisPool._isOnline[instanceName] = false;
+	            RedisPool._status[instanceName] = {
+	                online: false,
+	                lastError: null,
+	                warnings: []
+	            };
 	            RedisPool._pool[instanceName] = redis.createClient(config);
 	            RedisPool._pool[instanceName].on('connect', function () {
-	                RedisPool._isOnline[instanceName] = true;
+	                RedisPool._status[instanceName].online = true;
 	                debug('redis connected');
 	                cb(null);
 	            });
 	            RedisPool._pool[instanceName].on('error', function (e) {
 	                debug(e);
-	                RedisPool._isOnline[instanceName] = false;
-	                RedisPool._pool[instanceName] = null;
+	                RedisPool._status[instanceName].lastError = e;
 	                cb(e);
 	            });
 	            RedisPool._pool[instanceName].on('end', function () {
 	                RedisPool._pool[instanceName] = null;
-	                RedisPool._isOnline[instanceName] = false;
+	                RedisPool._status[instanceName].online = false;
 	                console.warn('Redis Connection closed for instance ' + instanceName);
 	                debug('Connection closed', instanceName);
 	            });
 	            RedisPool._pool[instanceName].on('warning', function (msg) {
 	                console.warn('Redis warning for instance ' + instanceName + '. MSG = ', msg);
+	                RedisPool._status[instanceName].warnings.push(msg);
 	                debug('Warning called: ', instanceName, msg);
 	            });
 	        }
-	        return RedisPool._pool[instanceName];
+	        else {
+	            cb();
+	        }
 	    };
 	    RedisPool.isOnline = function (instanceName) {
-	        return RedisPool._isOnline[instanceName];
+	        return RedisPool._status[instanceName].online;
 	    };
 	    RedisPool.kill = function (instanceName) {
-	        if (RedisPool._isOnline[instanceName] === true) {
+	        if (RedisPool._status[instanceName].online === true) {
 	            RedisPool._pool[instanceName].end();
 	        }
 	    };
 	    RedisPool.prototype.getConnection = function () {
 	        return RedisPool._pool[this.instanceName];
 	    };
+	    RedisPool.getConnection = function (instanceName) {
+	        if (RedisPool._status[instanceName].online) {
+	            return RedisPool._pool[instanceName];
+	        }
+	        debug('Redis Pool isn\'t online yet');
+	    };
 	    RedisPool.prototype.isOnline = function () {
-	        return RedisPool._isOnline[this.instanceName];
+	        return RedisPool._status[this.instanceName].online;
 	    };
 	    RedisPool.prototype.kill = function () {
-	        if (RedisPool._isOnline[this.instanceName] === true) {
+	        if (RedisPool._status[this.instanceName].online === true) {
 	            RedisPool._pool[this.instanceName].end();
 	        }
 	    };
 	    RedisPool._pool = {};
-	    RedisPool._isOnline = {};
+	    RedisPool._status = {};
 	    return RedisPool;
 	}());
 	exports.RedisPool = RedisPool;
@@ -1052,9 +1092,9 @@ module.exports =
 	};
 	var instanceCB_1 = __webpack_require__(10);
 	var helpers_1 = __webpack_require__(3);
-	var dbug = __webpack_require__(6);
-	var cache_1 = __webpack_require__(7);
-	var CacheEngine_1 = __webpack_require__(5);
+	var dbug = __webpack_require__(5);
+	var cache_1 = __webpack_require__(6);
+	var CacheEngine_1 = __webpack_require__(7);
 	var debug = dbug('simple-url-cache');
 	var CacheEngineCB = (function (_super) {
 	    __extends(CacheEngineCB, _super);
@@ -1081,9 +1121,9 @@ module.exports =
 	        if (parsedURL.domain.length === 0) {
 	            parsedURL.domain = this.defaultDomain;
 	        }
-	        var urll = new cache_1.CacheCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
-	        CacheEngine_1.default.urls.push(urll);
-	        return urll;
+	        var cache = new cache_1.CacheCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+	        this.addUrl(cache);
+	        return cache;
 	    };
 	    return CacheEngineCB;
 	}(CacheEngine_1.default));
@@ -1097,21 +1137,32 @@ module.exports =
 
 	"use strict";
 	var CacheRuleEngine_1 = __webpack_require__(15);
+	var helpers_1 = __webpack_require__(3);
 	var pool_1 = __webpack_require__(11);
+	var debug = __webpack_require__(5)('simple-url-cache');
 	var Instance = (function () {
-	    function Instance(instanceName, redisConfig, cb) {
+	    function Instance(instanceName, redisConfig, config, cb) {
+	        var _this = this;
+	        if (config === void 0) { config = { on_existing_regex: 'replace', on_publish_update: false }; }
 	        this.instanceName = instanceName;
 	        this.redisConfig = redisConfig;
-	        this._conn = new pool_1.RedisPool(instanceName, redisConfig, function (err) {
+	        this.config = config;
+	        this.instanciated = false;
+	        helpers_1.default.isNotUndefined(instanceName, redisConfig, config, cb);
+	        new pool_1.RedisPool(instanceName, redisConfig, function (err) {
 	            if (err)
-	                throw new Error('Error connecting to REDIS');
-	        });
-	        this.ruleEngine = new CacheRuleEngine_1.default(instanceName, this._conn, false, function (err) {
-	            if (err)
-	                return cb(err);
-	            cb();
+	                cb('Error connecting to REDIS: ' + err);
+	            _this.ruleEngine = new CacheRuleEngine_1.default(instanceName, function (err) {
+	                if (err)
+	                    return cb(err);
+	                _this.instanciated = true;
+	                cb();
+	            });
 	        });
 	    }
+	    Instance.prototype.getConfig = function () {
+	        return this.config;
+	    };
 	    Instance.prototype.getInstanceName = function () {
 	        return this.instanceName;
 	    };
@@ -1120,6 +1171,9 @@ module.exports =
 	    };
 	    Instance.prototype.getRedisConfig = function () {
 	        return this.redisConfig;
+	    };
+	    Instance.prototype.isInstanciated = function () {
+	        return this.instanciated;
 	    };
 	    return Instance;
 	}());
@@ -1133,17 +1187,16 @@ module.exports =
 
 	"use strict";
 	var helpers_1 = __webpack_require__(3);
+	var pool_1 = __webpack_require__(11);
 	var CacheRuleManager_1 = __webpack_require__(16);
-	var CacheEngine_1 = __webpack_require__(5);
-	var debug = __webpack_require__(6)('simple-url-cache-RULE');
+	var CacheEngine_1 = __webpack_require__(7);
+	var debug = __webpack_require__(5)('simple-url-cache-RULE');
 	var CacheRuleEngine = (function () {
-	    function CacheRuleEngine(instanceName, _conn, scan, cb) {
+	    function CacheRuleEngine(instanceName, cb) {
 	        var _this = this;
-	        if (scan === void 0) { scan = true; }
 	        this.instanceName = instanceName;
-	        this._conn = _conn;
-	        this.scan = scan;
-	        this._conn.getConnection().hget(helpers_1.default.getConfigKey(), this.instanceName, function (err, data) {
+	        this._conn = pool_1.RedisPool.getConnection(instanceName);
+	        this._conn.hget(helpers_1.default.getConfigKey(), this.instanceName, function (err, data) {
 	            if (err)
 	                throw new Error('Redis error - retrieving ' + helpers_1.default.getConfigKey() + ' -> ' + err);
 	            if (data === null) {
@@ -1161,17 +1214,17 @@ module.exports =
 	    };
 	    CacheRuleEngine.prototype.publish = function () {
 	        var _this = this;
-	        CacheEngine_1.default.publish();
+	        CacheEngine_1.default.updateAllUrlCategory(this.instanceName);
 	        var stringified = JSON.stringify(this.manager.getRules(), helpers_1.default.JSONRegExpReplacer, 2);
-	        this._conn.getConnection().hset(helpers_1.default.getConfigKey(), this.instanceName, stringified, function (err) {
+	        this._conn.hset(helpers_1.default.getConfigKey(), this.instanceName, stringified, function (err) {
 	            if (err)
 	                helpers_1.default.RedisError('while publishing config ' + stringified, err);
-	            _this._conn.getConnection().publish(_this.getChannel(), 'PUSHED');
+	            _this._conn.publish(_this.getChannel(), 'PUSHED');
 	        });
 	    };
 	    CacheRuleEngine.prototype.onPublish = function () {
 	        var _this = this;
-	        this._conn.getConnection().hget(helpers_1.default.getConfigKey(), this.instanceName, function (err, data) {
+	        this._conn.hget(helpers_1.default.getConfigKey(), this.instanceName, function (err, data) {
 	            if (err)
 	                throw new Error('Redis error - retrieving ' + helpers_1.default.getConfigKey());
 	            if (data === null) {
@@ -1181,8 +1234,8 @@ module.exports =
 	            _this.manager.updateRules(parsedData);
 	        });
 	    };
-	    CacheRuleEngine.prototype.getRules = function () {
-	        return this.manager.getRules();
+	    CacheRuleEngine.prototype.getManager = function () {
+	        return this.manager;
 	    };
 	    return CacheRuleEngine;
 	}());
@@ -1196,11 +1249,16 @@ module.exports =
 
 	"use strict";
 	var helpers_1 = __webpack_require__(3);
+	var uuid = __webpack_require__(18);
 	var CacheRuleManager = (function () {
 	    function CacheRuleManager(cacheRules, scan) {
 	        this.cacheRules = cacheRules;
 	        this.scan = scan;
+	        this.uuid = uuid.v1();
 	    }
+	    CacheRuleManager.prototype.getUUID = function () {
+	        return this.uuid;
+	    };
 	    CacheRuleManager.prototype.updateRules = function (cacheRules) {
 	        this.cacheRules = cacheRules;
 	    };
@@ -1325,6 +1383,12 @@ module.exports =
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.default = CacheRulesCreator;
 
+
+/***/ },
+/* 18 */
+/***/ function(module, exports) {
+
+	module.exports = require("node-uuid");
 
 /***/ }
 /******/ ]);

@@ -19,7 +19,9 @@ var storageConfig = {
 };
 
 var cacheEngine,
+    cacheEngine2,
     instance,
+    instance2,
     domain = 'http://localhost:3000',
     cacheMaxAgeURL = '/maxAge.html',
     cacheAlwaysURL = '/always.html',
@@ -27,38 +29,17 @@ var cacheEngine,
     notMatchedURL = '/unmatched.html',
     html = '<b>Some HTML</b>',
     cacheRuleEngine,
-    url;
+    cacheRuleEngine2,
+    url,
+    url2;
 
 var URL_DETAILS = require('./helper/commonCB').URL_DETAILS;
 
-describe('a small test', function(){
 
-    var fn = function() {
-        this.A = [];
 
-        this.getA = function() {return this.A}
-
-    }
-
-    it('should get by reference', function() {
-
-        var test = new fn();
-        var a = test.getA();
-        a.push(1);
-        var b = test.getA();
-        expect(b).not.eql(a);
-        test.A.push(2);
-        expect(test.getA()).eql([2]);
-
-    })
-
-})
-
-describe('So many level, cant mocha run it in order?', function () {
+describe('Creating a new Config for INSTANCE1', function () {
 
     var creator = new CacheRulesCreator('INSTANCE1', storageConfig);
-
-
 
     it('We delete redis Exiting Cache Configs', function (done) {
         const client = redis.createClient(storageConfig);
@@ -70,7 +51,6 @@ describe('So many level, cant mocha run it in order?', function () {
     });
 
     it('should create the new cache rule ok', function (done) {
-
         creator.importRules(cacheRules, err => {
             if (err) return done(err);
             done();
@@ -86,38 +66,34 @@ describe('So many level, cant mocha run it in order?', function () {
     });
 
     it('should initialize the cacheEngine OK', function (done) {
-        instance = new Instance('INSTANCE1', storageConfig, function (err) {
-            if (err) return done(err);
+        instance = new Instance('INSTANCE1', storageConfig, {}, function (err) {
+            if (err) {
+                debug('ERR = ', err);
+                return done(err);
+            }
             cacheEngine = new CacheEngine(domain, instance);
-            cacheRuleEngine = instance.ruleEngine;
+            cacheRuleEngine = instance.getCacheRuleEngine();
             url = cacheEngine.url(notMatchedURL);
             done();
         });
     });
 
-    it('should have instance1 and redis1 defined', function () {
+    it('should have instance, cacheEngine, CacheRuleEngine and url', function () {
         expect(instance).to.be.defined;
         expect(cacheEngine).to.be.defined;
+        expect(cacheRuleEngine).to.be.defined;
+        expect(url).to.be.defined;
     });
 
 });
 
-
-describe('launching tests', function () {
-
-
-
-    it('cacheRuleEngine should be set', function () {
-        expect(url).to.be.defined;
-    });
-
+describe('Few checks', function() {
     it('it should get the correct instance name', function () {
         expect(instance.getInstanceName()).eql('INSTANCE1');
     });
 
     it('Should get the same CacheConfig as the default one', function () {
-
-        expect(cacheRuleEngine.manager.cacheRules).eql(cacheRules);
+        expect(cacheRuleEngine.getManager().getRules()).eql(cacheRules);
     });
 
     it(' classification check & url name check ', function() {
@@ -128,10 +104,13 @@ describe('launching tests', function () {
     it(' domain check ', function() {
         expect(url.getDomain()).eql(domain);
     });
+});
+
+describe('With InstanceConfig.on_publish_update = false', function () {
 
     it('should set default value to always ok', function() {
-        cacheRuleEngine.manager.setDefault('always');
-        expect(cacheRuleEngine.getRules().default).eql('always');
+        cacheRuleEngine.getManager().setDefault('always');
+        expect(cacheRuleEngine.getManager().getRules().default).eql('always');
     });
 
     it('url classification should still be never ', function() {
@@ -140,6 +119,13 @@ describe('launching tests', function () {
 
     it('it runs publish() ', function() {
         cacheRuleEngine.publish();
+    });
+
+    it('url classification should still be never ', function() {
+        expect(url.getCategory()).eql('never');
+    });
+
+    it('it runs url.setCategory() ', function() {
         url.setCacheCategory();
     });
 
@@ -149,17 +135,86 @@ describe('launching tests', function () {
 
 });
 
+describe('With InstanceConfig.on_publish_update = true', function () {
 
-
-    /*
-    describe('setting the default rule to always', function() {
-
-        it('should set ok', function() {
-            cacheRuleEngine.manager.setDefault('always');
-            expect(cacheRuleEngine.getRules().default).eql('always');
+    it('should initialize the cacheEngine OK', function (done) {
+        instance2 = new Instance('INSTANCE1', storageConfig, { on_publish_update: true}, function (err) {
+            if (err) return done(err);
+            cacheEngine2 = new CacheEngine(domain, instance2);
+            cacheRuleEngine = instance2.getCacheRuleEngine();
+            url2 = cacheEngine2.url(notMatchedURL);
+            done();
         });
+    });
 
-    });*/
+    it('should have instance, cacheEngine, CacheRuleEngine and url', function () {
+        expect(instance2).to.be.defined;
+        expect(cacheEngine2).to.be.defined;
+        expect(cacheRuleEngine2).to.be.defined;
+        expect(url2).to.be.defined;
+    });
+
+    it('it should get the correct instance name', function () {
+        expect(instance.getInstanceName()).eql('INSTANCE1');
+    });
+
+    it('Should get a dfferent  CacheConfig as the default one', function () {
+        expect(cacheRuleEngine.getManager().getRules()).not.eql(cacheRules);
+    });
+
+    it('URL should get the always classification from the previous test suite', function() {
+        expect(url2.getUrl()).eql(notMatchedURL);
+        expect(url2.getCategory()).eql('always');
+    });
+
+    it(' domain check ', function() {
+        expect(url2.getDomain()).eql(domain);
+    });
+
+    it('should set default value to never ok', function() {
+        cacheRuleEngine.getManager().setDefault('never');
+        expect(cacheRuleEngine.getManager().getRules().default).eql('never');
+    });
+
+    it('url classification should still be always ', function() {
+        expect(url2.getCategory()).eql('always');
+    });
+
+    it('it runs publish() ', function() {
+        cacheRuleEngine.publish();
+    });
+
+    it('url classification should be never ', function() {
+        expect(url2.getCategory()).eql('never');
+    });
+
+    it('it runs url.setCategory() ', function() {
+        url2.setCacheCategory();
+    });
+
+    it('url classification should be never ', function() {
+        expect(url2.getCategory()).eql('never');
+    });
+});
+
+
+describe('Testing adding/removing rules', function() {
+
+});
+
+//TODO adding, deleting, getting rules
+// with different strategies
+
+
+/*
+describe('setting the default rule to always', function() {
+
+    it('should set ok', function() {
+        cacheRuleEngine.manager.setDefault('always');
+        expect(cacheRuleEngine.getRules().default).eql('always');
+    });
+
+});*/
 
 
 

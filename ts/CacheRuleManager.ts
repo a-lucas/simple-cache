@@ -1,9 +1,18 @@
 import {CacheRules} from "./interfaces";
 import Helpers from "./helpers";
+import * as uuid from 'node-uuid';
 
 export default class CacheRuleManager {
     
-    constructor(public cacheRules: CacheRules, private scan: boolean) {}
+    private uuid: string;
+    
+    constructor(public cacheRules: CacheRules, private scan: boolean) {
+        this.uuid = uuid.v1();
+    }
+
+    getUUID(): string {
+        return this.uuid;
+    }
 
     updateRules(cacheRules: CacheRules) {
         this.cacheRules = cacheRules;
