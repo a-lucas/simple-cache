@@ -67,8 +67,6 @@ export class CacheCommon {
         let i;
         const config = this._storageInstance.getCacheRules();
 
-        debug('setCacheCategory Called with config ', config);
-
         for (i in config.maxAge) {
             if (this.getRegexTest (config.maxAge[i]) === true) {
                 this._category = 'maxAge';

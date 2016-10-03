@@ -1,9 +1,10 @@
 import {CacheRules, option_on_existing_regex} from "./interfaces";
 import Helpers from "./helpers";
+const debug = require('debug')('simple-url-cache');
 
 export default class CacheRuleManager {
     
-    constructor(public cacheRules: CacheRules, private option_on_existing_regex: option_on_existing_regex) {}
+    constructor(public cacheRules: CacheRules, private on_existing_regex: option_on_existing_regex) {}
 
     updateRules(cacheRules: CacheRules) {
         this.cacheRules = cacheRules;
@@ -67,22 +68,24 @@ export default class CacheRuleManager {
     }
 
     private findRegex( regex: RegExp ) {
-        ['always', 'never', 'maxAge'].forEach((type) => {
-            this.cacheRules[type].forEach( (rule, index) => {
+        let  info = null;
+        ['always', 'never', 'maxAge'].some((type) => {
+            this.cacheRules[type].some( (rule, index) => {
                 if (Helpers.SameRegex(rule.regex, regex)) {
-                    return {
+                    info =  {
                         type: type,
                         index: index
                     };
+                    return true;
                 }
             });
         });
-        return null;
+        return info;
     }
 
     private add(rule, where, found) {
         if (found!== null) {
-            switch(this.option_on_existing_regex) {
+            switch(this.on_existing_regex) {
                 case 'ignore':
                     break;
                 case 'replace':

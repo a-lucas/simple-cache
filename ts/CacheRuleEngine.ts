@@ -21,7 +21,6 @@ export default class CacheRuleEngine {
      * @param _conn
      */
     constructor(private instanceName: string, config: InstanceConfig,  cb) {
-
         this._conn = RedisPool.getConnection(instanceName);
         this._conn.hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
             if (err) throw new Error('Redis error - retrieving ' + Helpers.getConfigKey() + ' -> ' + err);

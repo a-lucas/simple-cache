@@ -369,7 +369,6 @@ module.exports =
 	    CacheCommon.prototype.setCacheCategory = function () {
 	        var i;
 	        var config = this._storageInstance.getCacheRules();
-	        debug('setCacheCategory Called with config ', config);
 	        for (i in config.maxAge) {
 	            if (this.getRegexTest(config.maxAge[i]) === true) {
 	                this._category = 'maxAge';
@@ -1145,6 +1144,7 @@ module.exports =
 	        this.config = config;
 	        this.instanciated = false;
 	        helpers_1.default.isNotUndefined(instanceName, redisConfig, config, cb);
+	        this.config = Object.assign({ on_existing_regex: 'replace', on_publish_update: false }, config);
 	        new pool_1.RedisPool(instanceName, redisConfig, function (err) {
 	            if (err)
 	                cb('Error connecting to REDIS: ' + err);
@@ -1245,10 +1245,11 @@ module.exports =
 
 	"use strict";
 	var helpers_1 = __webpack_require__(3);
+	var debug = __webpack_require__(5)('simple-url-cache');
 	var CacheRuleManager = (function () {
-	    function CacheRuleManager(cacheRules, option_on_existing_regex) {
+	    function CacheRuleManager(cacheRules, on_existing_regex) {
 	        this.cacheRules = cacheRules;
-	        this.option_on_existing_regex = option_on_existing_regex;
+	        this.on_existing_regex = on_existing_regex;
 	    }
 	    CacheRuleManager.prototype.updateRules = function (cacheRules) {
 	        this.cacheRules = cacheRules;
@@ -1300,21 +1301,23 @@ module.exports =
 	    };
 	    CacheRuleManager.prototype.findRegex = function (regex) {
 	        var _this = this;
-	        ['always', 'never', 'maxAge'].forEach(function (type) {
-	            _this.cacheRules[type].forEach(function (rule, index) {
+	        var info = null;
+	        ['always', 'never', 'maxAge'].some(function (type) {
+	            _this.cacheRules[type].some(function (rule, index) {
 	                if (helpers_1.default.SameRegex(rule.regex, regex)) {
-	                    return {
+	                    info = {
 	                        type: type,
 	                        index: index
 	                    };
+	                    return true;
 	                }
 	            });
 	        });
-	        return null;
+	        return info;
 	    };
 	    CacheRuleManager.prototype.add = function (rule, where, found) {
 	        if (found !== null) {
-	            switch (this.option_on_existing_regex) {
+	            switch (this.on_existing_regex) {
 	                case 'ignore':
 	                    break;
 	                case 'replace':

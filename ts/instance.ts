@@ -15,6 +15,8 @@ export default class Instance {
 
         Helpers.isNotUndefined(instanceName, redisConfig, config, cb);
 
+        this.config = (<any>Object).assign({on_existing_regex: 'replace', on_publish_update: false  }, config);
+
         new RedisPool(instanceName, redisConfig, (err) => {
             if(err) cb('Error connecting to REDIS: ' + err);
             this.ruleEngine = new CacheRuleEngine(instanceName, this.config, (err) => {

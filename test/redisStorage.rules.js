@@ -223,6 +223,102 @@ describe('Testing adding/removing rules with default settings on_existing_regex 
     });
 });
 
+
+describe('Testing adding/removing rules with settings on_existing_regex = ignore', function() {
+
+    it('should initialize the cacheEngine OK', function (done) {
+        instance = new Instance('INSTANCE1', storageConfig, { on_existing_regex: 'ignore' }, function (err) {
+            if (err) {
+                debug('ERR = ', err);
+                return done(err);
+            }
+            cacheEngine = new CacheEngine(domain, instance);
+            cacheRuleEngine = instance.getCacheRuleEngine();
+            url = cacheEngine.url(notMatchedURL);
+            done();
+        });
+    });
+
+    it('should have instance, cacheEngine, CacheRuleEngine and url', function () {
+        expect(instance).to.be.defined;
+        expect(cacheEngine).to.be.defined;
+        expect(cacheRuleEngine).to.be.defined;
+        expect(url).to.be.defined;
+    });
+
+    it('Adds a new Always rule /aaa/ without error', function() {
+        cacheRuleEngine.getManager().addAlwaysRule(/aaa/);
+    });
+
+    it('Gets all cacheRules.always should contain /aaa', function() {
+        const rules = cacheRuleEngine.getManager().getRules();
+        expect(rules.always).to.contain({regex: /aaa/});
+    });
+
+    it('Adds a new never rule /aaa/ without error', function() {
+        cacheRuleEngine.getManager().addNeverRule( /aaa/);
+    });
+
+    it('Gets all cacheRules.always should still contain /aaa', function() {
+        const rules = cacheRuleEngine.getManager().getRules();
+        expect(rules.always).to.contain({regex: /aaa/});
+    });
+
+    it('Gets all cacheRules.never should not contain /aaa', function() {
+        const rules = cacheRuleEngine.getManager().getRules();
+        expect(rules.never).to.not.contain({regex: /aaa/});
+    });
+});
+
+
+
+describe('Testing adding/removing rules with settings on_existing_regex = error', function() {
+
+    it('should initialize the cacheEngine OK', function (done) {
+        instance = new Instance('INSTANCE1', storageConfig, { on_existing_regex: 'error' }, function (err) {
+            if (err) {
+                debug('ERR = ', err);
+                return done(err);
+            }
+            cacheEngine = new CacheEngine(domain, instance);
+            cacheRuleEngine = instance.getCacheRuleEngine();
+            url = cacheEngine.url(notMatchedURL);
+            done();
+        });
+    });
+
+    it('should have instance, cacheEngine, CacheRuleEngine and url', function () {
+        expect(instance).to.be.defined;
+        expect(cacheEngine).to.be.defined;
+        expect(cacheRuleEngine).to.be.defined;
+        expect(url).to.be.defined;
+    });
+
+    it('Adds a new Always rule /aaa/ without error', function() {
+        cacheRuleEngine.getManager().addAlwaysRule(/aaa/);
+    });
+
+    it('Gets all cacheRules.always should contain /aaa', function() {
+        const rules = cacheRuleEngine.getManager().getRules();
+        expect(rules.always).to.contain({regex: /aaa/});
+    });
+
+    it('Adds a new never rule /aaa/ should throw an error', function() {
+        expect( function(){cacheRuleEngine.getManager().addNeverRule( /aaa/)}).to.throw;
+    });
+
+    it('Gets all cacheRules.always should still contain /aaa', function() {
+        const rules = cacheRuleEngine.getManager().getRules();
+        expect(rules.always).to.contain({regex: /aaa/});
+    });
+
+    it('Gets all cacheRules.never should not contain /aaa', function() {
+        const rules = cacheRuleEngine.getManager().getRules();
+        expect(rules.never).to.not.contain({regex: /aaa/});
+    });
+});
+
+
 //TODO adding, deleting, getting rules
 // with different strategies
 
