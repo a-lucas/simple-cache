@@ -1,15 +1,10 @@
-import {CacheRules, option_on_existing_regex} from "./interfaces";
-import Helpers from "./helpers";
+import {CacheRules, option_on_existing_regex} from "../interfaces";
+import Helpers from "../helpers";
 const debug = require('debug')('simple-url-cache');
 
 export default class CacheRuleManager {
     
     constructor(public cacheRules: CacheRules, private on_existing_regex: option_on_existing_regex) {}
-
-    updateRules(cacheRules: CacheRules) {
-        this.cacheRules = cacheRules;
-    }
-
 
     addMaxAgeRule(regex: RegExp, maxAge:number) {
         Helpers.isNotUndefined(regex, maxAge);
@@ -32,6 +27,11 @@ export default class CacheRuleManager {
         const found = this.findRegex(regex);
         this.add({regex: regex}, 'always', found);
     }
+
+    getRules(): CacheRules {
+        return this.cacheRules;
+    }
+
 
     mergeWith(rules: CacheRules) {
         //TODO
@@ -63,22 +63,27 @@ export default class CacheRuleManager {
         this.cacheRules.always = [];
     }
 
-    getRules(): CacheRules {
-        return this.cacheRules;
+    //internal method made public for access out of scope (CacheRuleEngine)
+    updateRules(cacheRules: CacheRules) {
+        this.cacheRules = cacheRules;
     }
 
+
     private findRegex( regex: RegExp ) {
-        let  info = null;
-        ['always', 'never', 'maxAge'].some((type) => {
-            this.cacheRules[type].some( (rule, index) => {
-                if (Helpers.SameRegex(rule.regex, regex)) {
+        let  info = null,
+            index,
+            rule;
+
+        ['always', 'never', 'maxAge'].forEach((type: string) => {
+            for(index=0; index<this.cacheRules[type].length; index++) {
+                if (Helpers.SameRegex(this.cacheRules[type][index].regex, regex)) {
                     info =  {
                         type: type,
                         index: index
                     };
-                    return true;
+                    break;
                 }
-            });
+            }
         });
         return info;
     }

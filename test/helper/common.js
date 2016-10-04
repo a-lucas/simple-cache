@@ -6,6 +6,7 @@ chai.use(chaiAsPromised);
 var debug = require('debug')('simple-url-cache-test');
 var expect = chai.expect;
 
+
 //describes
 function WAIT_HAS_NOT_URL (url, time) {
     describe('Waits ' + time +' and shouldn\'t have the url cached ' + url.getUrl(), function() {
@@ -62,13 +63,13 @@ function SET_URL(url, html) {
 }
 
 function DELETE_URL(url) {
-    describe('Delet the URL ' + url.getUrl(), function() {
+    describe('Delete the URL ' + url.getUrl(), function() {
 
         it('Should delete the url without reject', function(done) {
             url.delete().then(function(res) {
                 done();
             }, function(err) {
-                done('err' + err);
+                done('err ' + err);
             })
         });
 
@@ -83,16 +84,16 @@ function DELETE_URL(url) {
 }
 
 function SET_URL_FALSE(url, html) {
-    describe('Calling set() should resolve to (false) - already cached', function() {
+    describe('Calling set() should resolve to (false) - already cached | never matching', function() {
         var setted;
         it('cache the url '+ url.getUrl() + ' without errors', function(done){
             url.set(html).then(function(res) {
                 setted = res;
                 done();
             }, function(res) {
-                done('err' +res);
+                done('err' + res);
             }).catch(function(res) {
-                done('err' +res);
+                done('err' + res);
             });
         });
         it('set() should resolve(false)', function() {
@@ -222,10 +223,51 @@ function DELETE_ALL(cacheEngine) {
             expect(domains).eql([]);
         });
     });
-
 }
 
+function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
 
+    describe('Creating a new Config for '+ instanceName, function () {
+
+        var creator;
+
+        it('We delete redis Exiting Cache Config', function (done) {
+            const client = redis.createClient(storageConfig);
+
+            client.hdel('url-cache:ruleconfig', instanceName, function (err) {
+                if (err) return done(err);
+                done();
+            });
+        });
+
+        it('should create the CacheRuleCreator ok', function (done) {
+
+            creator = new CacheRulesCreator(instanceName, storageConfig, function (err) {
+                if (err) return done(err);
+                done();
+            });
+        });
+
+        it('should create the new cache rule ok', function (done) {
+
+            creator.importRules(cacheRules, err => {
+                if (err) return done(err);
+                done();
+            });
+        });
+
+        it('should complain about the fact that a Cache Config already exists', function () {
+
+            creator.importRules(cacheRules, err => {
+                if (err) return done();
+                if (!err) done('Should be refused');
+            });
+        });
+
+    });
+}
+
+module.exports.RECREATE_CONFIG = RECREATE_CONFIG;
 module.exports.WAIT_GET_URLS = WAIT_GET_URLS;
 module.exports.DELETE_ALL = DELETE_ALL;
 module.exports.GET_URLS = GET_URLS;

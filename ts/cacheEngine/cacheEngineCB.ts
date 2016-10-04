@@ -1,11 +1,12 @@
-import {CacheRules, StorageInstanceCB, RedisStorageConfig, CallBackBooleanParam, CallBackStringParam, CallBackStringArrayParam} from './interfaces';
-import RedisStorageInstanceCB from "./redis/instanceCB";
-import Helpers from './helpers';
-import * as dbug from 'debug';
-import {CacheCB} from './cache';
-import CacheEngine from "./CacheEngine";
-import Instance from "./instance";
+import { CallBackBooleanParam, CallBackStringArrayParam} from '../interfaces';
+import RedisStorageInstanceCB from "../redis/instanceCB";
 
+import Helpers from '../helpers';
+import {UrlCB} from './cache';
+import CacheEngine from "./CacheEngine";
+import Instance from "../instance";
+
+import * as dbug from 'debug';
 const debug = dbug('simple-url-cache');
 
 class CacheEngineCB extends CacheEngine{
@@ -41,7 +42,7 @@ class CacheEngineCB extends CacheEngine{
      * The left side is used to create a subdirectory for File storage, or a collection for Redis. The Redis collection naming convention is [db_]domain if any db parameter is provided. If no db is provided, then the default domain is used to store url without hostnames.
      * @returns {CacheStorage}
      */
-    url(url:string):CacheCB {
+    url(url:string):UrlCB {
 
         const parsedURL = Helpers.parseURL(url);
 
@@ -50,7 +51,7 @@ class CacheEngineCB extends CacheEngine{
             parsedURL.domain = this.defaultDomain;
         }
 
-        let cache  = new CacheCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+        let cache  = new UrlCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
         this.addUrl(cache);
         return cache;
     }

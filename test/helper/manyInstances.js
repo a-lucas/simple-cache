@@ -6,42 +6,43 @@ var debug = require('debug')('simple-url-cache-test');
 var expect = chai.expect;
 
 
-var DELETE_DOMAIN = require('./common').DELETE_DOMAIN;
-var HAS_NOT_DOMAIN = require('./common').HAS_NOT_DOMAIN;
-var HAS_DOMAIN = require('./common').HAS_DOMAIN;
-var HAS_NOT_URL = require('./common').HAS_NOT_URL;
-var HAS_URL = require('./common').HAS_URL;
-var SET_URL = require('./common').SET_URL;
 
 
-var DELETE_ALL = require('./common').DELETE_ALL;
-
-module.exports = function(instance1, instance2, instance3, defaultDomain1, defaultDomain2, defaultDomain3) {
+module.exports = function(type, data) {
 
 
-    var cacheMaxAgeURL = 'maxAge.html';
-    var cacheAlwaysURL = 'always.html';
-    var cacheNeverURL = 'never.html';
-    var notMatchedURL = 'unmatched.html';
+    switch(type) {
+        case 'cb':
+            var DELETE_DOMAIN = require('./commonCB').DELETE_DOMAIN;
+            var HAS_NOT_DOMAIN = require('./commonCB').HAS_NOT_DOMAIN;
+            var HAS_DOMAIN = require('./commonCB').HAS_DOMAIN;
+            var HAS_NOT_URL = require('./commonCB').HAS_NOT_URL;
+            var HAS_URL = require('./commonCB').HAS_URL;
+            var SET_URL = require('./commonCB').SET_URL;
+            var DELETE_ALL = require('./commonCB').DELETE_ALL;
+            break;
+        case 'promise':
+            var DELETE_DOMAIN = require('./common').DELETE_DOMAIN;
+            var HAS_NOT_DOMAIN = require('./common').HAS_NOT_DOMAIN;
+            var HAS_DOMAIN = require('./common').HAS_DOMAIN;
+            var HAS_NOT_URL = require('./common').HAS_NOT_URL;
+            var HAS_URL = require('./common').HAS_URL;
+            var SET_URL = require('./common').SET_URL;
+            var DELETE_ALL = require('./common').DELETE_ALL;
+            break;
+    }
 
-    var html = '<b>Some HTML</b>';
+    var html = data.html,
+        cacheEngine1 = data.i1.engine,
+        cacheEngine2 = data.i2.engine,
+        cacheEngine3 = data.i3.engine,
+        instance1Urls = data.i1.urls,
+        instance2Urls = data.i2.urls,
+        instance3Urls = data.i3.urls,
+        domain1 = data.i1.domain,
+        domain2 = data.i2.domain,
+        domain3 = data.i3.domain;
 
-
-    var urls = [
-        'http://a.com/always.html',
-        'http://b.com/always.html',
-        'always.html'
-    ];
-
-    var instance1Urls = [],
-        instance2Urls = [],
-        instance3Urls = [];
-
-    urls.forEach(function (url) {
-        instance1Urls.push(instance1.url(url));
-        instance2Urls.push(instance2.url(url));
-        instance3Urls.push(instance3.url(url));
-    });
 
     describe('Instance 1 ...', function () {
         var i;
@@ -49,6 +50,7 @@ module.exports = function(instance1, instance2, instance3, defaultDomain1, defau
             SET_URL(instance1Urls[i], html);
         }
     });
+
 
     describe('Instance 2 ...', function () {
         describe('The two a.com & b.com should be already set', function() {
@@ -69,36 +71,35 @@ module.exports = function(instance1, instance2, instance3, defaultDomain1, defau
 
 
     describe('Instance 2 ...', function () {
-        DELETE_DOMAIN('http://a.com', instance2);
+        DELETE_DOMAIN('http://a.com', cacheEngine2);
     });
 
     describe('Instance 1 ...', function () {
-        HAS_NOT_DOMAIN('http://a.com', instance1);
-        DELETE_DOMAIN('http://b.com', instance1);
+        HAS_NOT_DOMAIN('http://a.com', cacheEngine1);
+        DELETE_DOMAIN('http://b.com', cacheEngine1);
     });
 
     describe('Instance 1 ...', function () {
-        HAS_NOT_DOMAIN('http://b.com', instance2);
+        HAS_NOT_DOMAIN('http://b.com', cacheEngine2);
     });
 
     describe('Instance 3 ...', function () {
-        HAS_DOMAIN('http://a.com', instance3);
-        HAS_DOMAIN('http://b.com', instance3);
-
+        HAS_DOMAIN('http://a.com', cacheEngine3);
+        HAS_DOMAIN('http://b.com', cacheEngine3);
     });
 
     describe('Removing instance1', function() {
-        DELETE_ALL(instance1);
+        DELETE_ALL(cacheEngine1);
     });
 
     describe('Instance2 should have no domains', function() {
-        HAS_NOT_DOMAIN('http://a.com', instance2);
-        HAS_NOT_DOMAIN('http://b.com', instance2);
-        HAS_NOT_DOMAIN(defaultDomain2, instance2);
+        HAS_NOT_DOMAIN('http://a.com', cacheEngine2);
+        HAS_NOT_DOMAIN('http://b.com', cacheEngine2);
+        HAS_NOT_DOMAIN(domain2, cacheEngine2);
     });
 
     describe('Removing Instance3', function() {
-        DELETE_ALL(instance3);
+        DELETE_ALL(cacheEngine3);
     });
     
 };

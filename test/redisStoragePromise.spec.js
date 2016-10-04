@@ -1,6 +1,6 @@
 "use strict";
 
-var CacheEngine = require('./../dist/redis-cache').CacheEngineCB;
+var CacheEngine = require('./../dist/redis-cache').CacheEnginePromise;
 
 var Instance = require('./../dist/redis-cache').Instance;
 var CacheRulesCreator = require('./../dist/redis-cache').CacheRulesCreator;
@@ -76,7 +76,7 @@ function initializeManyInstanceVars(index, cacheEngine, domain) {
 
     if(manyInstancesVars.i1.engine!== null && manyInstancesVars.i2.engine!== null && manyInstancesVars.i3.engine!== null ) {
         console.log(manyInstancesVars);
-        manyInstances('cb', manyInstancesVars);
+        manyInstances('promise', manyInstancesVars);
     }
 }
 
@@ -142,7 +142,7 @@ describe('INITIALIZING CacheEngines and Instances', function () {
             if (err) return done(err);
             redis1 = new CacheEngine(domain1, instance1);
             var data = initializeOneInstanceVars(redis1, domain1);
-            oneInstance('cb', data);
+            oneInstance('promise', data);
             done();
         });
     });
@@ -209,7 +209,7 @@ describe('INITIALIZING CacheEngines and Instances', function () {
 //oneInstance(redis1, domain1);
 
 
-describe('REDIS storage with CALLBACKS', function () {
+describe('REDIS storage with Promises', function () {
 
     this.timeout(2000);
 

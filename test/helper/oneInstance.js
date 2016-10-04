@@ -1,48 +1,95 @@
-var chai = require('chai');
-var chaiAsPromised = require("chai-as-promised");
-chai.use(chaiAsPromised);
+"use strict";
 
 var debug = require('debug')('simple-url-cache-test');
+var Instance = require('./../../dist/redis-cache').Instance;
+var cacheRules = require('./../helper/cacheRules');
+var shared = require('mocha-shared');
+var chai = require('chai');
 var expect = chai.expect;
 
+var instanceName1 = 'INSTANCE',
+    storageConfig = {
+        type: 'redis',
+        host: '127.0.0.1',
+        port: 6379,
+        socket_keepalive: true
+    },
+    domain1 = 'http://localhost:3000',
+    CacheEngine,
+    cacheEngine,
+    url,
+    DELETE_DOMAIN,
+    HAS_DOMAIN,
+    SET_URL,
+    SET_URL_FALSE,
+    HAS_NOT_URL,
+    DELETE_ALL,
+    DELETE_URL,
+    WAIT_HAS_NOT_URL,
+    SET_FORCE,
+    URL_DETAILS,
+    GET_URLS,
+    WAIT_GET_URLS;
 
-var DELETE_DOMAIN = require('./common').DELETE_DOMAIN;
-var HAS_DOMAIN = require('./common').HAS_DOMAIN;
-var SET_URL = require('./common').SET_URL;
-var SET_URL_FALSE = require('./common').SET_URL_FALSE;
-var HAS_NOT_URL = require('./common').HAS_NOT_URL;
-var DELETE_ALL = require('./common').DELETE_ALL;
-var DELETE_URL = require('./common').DELETE_URL;
-var WAIT_HAS_NOT_URL = require('./common').WAIT_HAS_NOT_URL;
-var SET_FORCE = require('./common').SET_FORCE;
-var URL_DETAILS = require('./common').URL_DETAILS;
-var GET_URLS = require('./common').GET_URLS;
-var WAIT_GET_URLS = require('./common').WAIT_GET_URLS;
+module.exports = function (type, data) {
 
-module.exports = function (cacheEngine, defaultDomain) {
+    switch (type) {
+        case 'cb':
+            CacheEngine = require('./../../dist/redis-cache').CacheEngineCB;
+            DELETE_DOMAIN = require('./commonCB').DELETE_DOMAIN;
+            HAS_DOMAIN = require('./commonCB').HAS_DOMAIN;
+            SET_URL = require('./commonCB').SET_URL;
+            SET_URL_FALSE = require('./commonCB').SET_URL_FALSE;
+            HAS_NOT_URL = require('./commonCB').HAS_NOT_URL;
+            DELETE_ALL = require('./commonCB').DELETE_ALL;
+            DELETE_URL = require('./commonCB').DELETE_URL;
+            WAIT_HAS_NOT_URL = require('./commonCB').WAIT_HAS_NOT_URL;
+            SET_FORCE = require('./commonCB').SET_FORCE;
+            URL_DETAILS = require('./commonCB').URL_DETAILS;
+            GET_URLS = require('./commonCB').GET_URLS;
+            WAIT_GET_URLS = require('./commonCB').WAIT_GET_URLS;
+            break;
+        case 'promise':
+            CacheEngine = require('./../../dist/redis-cache').CacheEnginePromise;
+            DELETE_DOMAIN = require('./common').DELETE_DOMAIN;
+            HAS_DOMAIN = require('./common').HAS_DOMAIN;
+            SET_URL = require('./common').SET_URL;
+            SET_URL_FALSE = require('./common').SET_URL_FALSE;
+            HAS_NOT_URL = require('./common').HAS_NOT_URL;
+            DELETE_ALL = require('./common').DELETE_ALL;
+            DELETE_URL = require('./common').DELETE_URL;
+            WAIT_HAS_NOT_URL = require('./common').WAIT_HAS_NOT_URL;
+            SET_FORCE = require('./common').SET_FORCE;
+            URL_DETAILS = require('./common').URL_DETAILS;
+            GET_URLS = require('./common').GET_URLS;
+            WAIT_GET_URLS = require('./common').WAIT_GET_URLS;
+    }
 
-    var cacheMaxAgeURL = '/maxAge.html';
-    var cacheAlwaysURL = '/always.html';
-    var cacheNeverURL = '/never.html';
-    var notMatchedURL = '/unmatched.html';
+    var html = data.html,
+        cacheEngine = data.engine,
+        maxAge = data.maxAge,
+        never = data.never,
+        always = data.always,
+        unmatched = data.unmatched,
+        clearInstance = data.clearInstance,
+        multipleDomains = data.multipleDomains,
+        getStoredURLs = data.getStoredURLs,
+        domain = data.domain;
 
-    var html = '<b>Some HTML</b>';
 
-    var urlCache1, urlCache2, urlCache3, urlCache4;
+    describe('cacheMaxAge URL', function () {
 
+        URL_DETAILS(maxAge.obj, maxAge.str, 'maxAge');
 
-    describe('cacheMaxAge', function () {
+        SET_URL(maxAge.obj, html);
 
-        urlCache1 = cacheEngine.url(cacheMaxAgeURL);
+        SET_URL_FALSE(maxAge.obj, html);
 
-        SET_URL(urlCache1, html);
-        SET_URL_FALSE(urlCache1, html);
+        WAIT_HAS_NOT_URL(maxAge.obj, 1100);
 
-        WAIT_HAS_NOT_URL(urlCache1, 1100);
+        SET_URL(maxAge.obj, html);
 
-        SET_URL(urlCache1, html);
-
-        DELETE_URL(urlCache1);
+        DELETE_URL(maxAge.obj);
 
     });
 
@@ -50,148 +97,111 @@ module.exports = function (cacheEngine, defaultDomain) {
 
     describe('cacheNever', function () {
 
-        urlCache2 = cacheEngine.url(cacheNeverURL);
+        URL_DETAILS(never.obj, never.str, 'never');
 
-        URL_DETAILS(urlCache2, cacheNeverURL, 'never');
+        SET_URL_FALSE(never.obj, html);
 
-        SET_URL_FALSE(urlCache2, html);
-        //HAS_NOT_URL(urlCache2);
+        SET_FORCE(never.obj, html);
 
-        SET_FORCE(urlCache2, html);
-
-        DELETE_URL(urlCache2);
+        DELETE_URL(never.obj);
 
     });
 
 
     describe('unMatchedURL', function () {
-        urlCache3 = cacheEngine.url(notMatchedURL);
+        URL_DETAILS(unmatched.obj, unmatched.str, 'never');
 
-        URL_DETAILS(urlCache3, notMatchedURL, 'never');
+        SET_URL_FALSE(unmatched.obj, html);
 
-        SET_URL_FALSE(urlCache3, html);
+        SET_FORCE(unmatched.obj, html);
 
-        SET_FORCE(urlCache3, html);
-
-        DELETE_URL(urlCache3);
-        ;
+        DELETE_URL(unmatched.obj);
     });
 
 
     describe('cacheAlways', function () {
 
-        urlCache4 = cacheEngine.url(cacheAlwaysURL);
+        URL_DETAILS(always.obj, always.str, 'always');
 
-        URL_DETAILS(urlCache4, cacheAlwaysURL, 'always');
+        SET_URL(always.obj, html);
 
-        SET_URL(urlCache4, html);
+        SET_URL_FALSE(always.obj, html);
 
-        SET_URL_FALSE(urlCache4, html);
-
-        DELETE_URL(urlCache4);
+        DELETE_URL(always.obj);
 
     });
 
+
     describe('clearInstance()', function () {
-        var i,
-            urlCaches = [];
 
-        for (i = 0; i < 3; i++) {
-            urlCaches.push(cacheEngine.url('http://a' + i + '.com/always.html'));
-        }
-
-        DELETE_ALL(cacheEngine);
-
-        for (i = 0; i < 3; i++) {
-            SET_URL(urlCaches[i], html);
-        }
-
-        DELETE_ALL(cacheEngine);
+        clearInstance.forEach(function (url) {
+            SET_URL(url, html);
+        });
         DELETE_ALL(cacheEngine);
     });
 
 
     describe('multiple domains', function () {
 
-        var urlCaches = [];
-
-        urlCaches.push(cacheEngine.url('http://a.com/always.html'));
-        urlCaches.push(cacheEngine.url('http://b.com/always.html'));
-        urlCaches.push(cacheEngine.url('always.html'));
-
-        debug('SETTING URLS', urlCaches.length);
-
         describe('URLS should have the same instance name', function () {
             it('Instances', function () {
-                expect(urlCaches[0].getInstanceName()).eql(urlCaches[1].getInstanceName());
-                expect(urlCaches[0].getInstanceName()).eql(urlCaches[2].getInstanceName());
-                expect(urlCaches[2].getInstanceName()).eql(urlCaches[1].getInstanceName());
+                expect(multipleDomains[0].getInstanceName()).eql(multipleDomains[1].getInstanceName());
+                expect(multipleDomains[0].getInstanceName()).eql(multipleDomains[2].getInstanceName());
+                expect(multipleDomains[2].getInstanceName()).eql(multipleDomains[1].getInstanceName());
             });
-
         });
 
+        SET_URL(multipleDomains[0], html);
+        SET_URL(multipleDomains[1], html);
+        SET_URL(multipleDomains[2], html);
 
-        SET_URL(urlCaches[0], html);
-        SET_URL(urlCaches[1], html);
-        SET_URL(urlCaches[2], html);
+        URL_DETAILS(multipleDomains[0], '/always.html', 'always', 'http://a.com');
+        URL_DETAILS(multipleDomains[1], '/always.html', 'always', 'http://b.com');
 
-        console.log(urlCaches[0]);
-
-        URL_DETAILS(urlCaches[0], '/always.html', 'always', 'http://a.com');
-        URL_DETAILS(urlCaches[1], '/always.html', 'always', 'http://b.com');
-
-        HAS_DOMAIN(defaultDomain, cacheEngine);
-
+        HAS_DOMAIN(domain, cacheEngine);
         HAS_DOMAIN('http://a.com', cacheEngine);
         HAS_DOMAIN('http://b.com', cacheEngine);
 
         DELETE_DOMAIN('http://a.com', cacheEngine);
 
-        HAS_DOMAIN(defaultDomain, cacheEngine);
+        HAS_DOMAIN(domain, cacheEngine);
         HAS_DOMAIN('http://b.com', cacheEngine);
 
         DELETE_DOMAIN('http://whatever_should_silently_succeed', cacheEngine);
         DELETE_DOMAIN('http://b.com', cacheEngine);
         DELETE_DOMAIN('http://b.com', cacheEngine);
-        DELETE_DOMAIN(defaultDomain, cacheEngine);
+        DELETE_DOMAIN(domain, cacheEngine);
 
         describe('These URLs shouldnt be cached anymore', function () {
-            HAS_NOT_URL(urlCaches[0]);
-            HAS_NOT_URL(urlCaches[1]);
-            HAS_NOT_URL(urlCaches[2]);
+            HAS_NOT_URL(multipleDomains[0]);
+            HAS_NOT_URL(multipleDomains[1]);
+            HAS_NOT_URL(multipleDomains[2]);
         });
-
-
+        DELETE_ALL(cacheEngine);
     });
-
 
     describe('getCachedURLs()', function () {
 
-        var urlCaches = [];
-        urlCaches.push(cacheEngine.url('/0always.html'));
-        urlCaches.push(cacheEngine.url('http://a.com/1always.html'));
-        urlCaches.push(cacheEngine.url('http://a.com/maxAge.html'));
-
-        GET_URLS(defaultDomain, cacheEngine, []);
+        GET_URLS(domain, cacheEngine, []);
         GET_URLS('http://a.com', cacheEngine, []);
 
-        SET_URL(urlCaches[0], html);
-        SET_URL(urlCaches[1], html);
-        SET_URL(urlCaches[2], html);
 
-        GET_URLS(defaultDomain, cacheEngine, ['/0always.html']);
+        SET_URL(getStoredURLs[0], html);
+        SET_URL(getStoredURLs[1], html);
+        SET_URL(getStoredURLs[2], html);
+
+        GET_URLS(domain, cacheEngine, ['/0always.html']);
         GET_URLS('http://a.com', cacheEngine, ['/1always.html', '/maxAge.html']);
 
         WAIT_GET_URLS(cacheEngine, 1100, 'http://a.com', ['/1always.html']);
 
         DELETE_ALL(cacheEngine);
 
-        GET_URLS(defaultDomain, cacheEngine, []);
+        GET_URLS(domain, cacheEngine, []);
         GET_URLS('http://a.com', cacheEngine, []);
 
         DELETE_ALL(cacheEngine);
 
     });
-
 
 };

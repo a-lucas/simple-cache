@@ -1,4 +1,9 @@
 "use strict";
+var redis = require('redis');
+var CacheRulesCreator = require('./../../dist/redis-cache').CacheRulesCreator;
+
+var leche = require('leche');
+
 var chai = require('chai');
 var chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
@@ -6,39 +11,26 @@ chai.use(chaiAsPromised);
 var debug = require('debug')('simple-url-cache-test');
 var expect = chai.expect;
 
-//describes
+//Meeds context Sharing
+
+
 function WAIT_HAS_NOT_URL (url, time) {
-    describe('Waits ' + time +' and shouldn\'t have the url cached ' + url.getUrl(), function() {
-
+    describe('Waits ' + time +' and shouldn\'t have the url cached for ' + url.getUrl(), function() {
         it('waiting...', function(done) {
             setTimeout(function() {
                 done();
             }, time);
         });
-
         HAS_NOT_URL(url);
-
     });
-}
-
-function WAIT_GET_URLS (url, time, domain, urlExpected) {
-    describe('Waits ' + time , function() {
-
-        it('waiting...', function(done) {
-            setTimeout(function() {
-                done();
-            }, time);
-        });
-
-    });
-    GET_URLS(domain, url, urlExpected);
 }
 
 
 function SET_URL(url, html) {
 
-    describe('It sets the URL ' + url.getUrl(), function() {
+    describe('Setting a URL ' + url.getDomain() + url.getUrl() , function() {
         var setted;
+
         HAS_NOT_URL(url);
 
         it('cache the url without errors', function(done){
@@ -56,10 +48,11 @@ function SET_URL(url, html) {
         HAS_URL(url);
         URL_HAS_CONTENT(url, html);
     });
+
 }
 
 function DELETE_URL(url) {
-    describe('Delet the URL ' + url.getUrl(), function() {
+    describe('Deleting the URL ' + url.getDomain() + url.getUrl(), function() {
 
         it('Should delete the url without reject', function(done) {
             url.delete(function(err, res) {
@@ -69,19 +62,16 @@ function DELETE_URL(url) {
         });
 
         HAS_NOT_URL(url);
-
         URL_GET_REJECTED(url);
-
         DELETE_URL_REJECTED(url);
-
     });
 
 }
 
 function SET_URL_FALSE(url, html) {
-    describe('Calling set() should resolve to (false) - already cached', function() {
+    describe('Calling set() should resolve to (false) - already cached on ' + url.getUrl(), function() {
         var setted;
-        it('cache the url '+ url.getUrl() + ' without errors', function(done){
+        it('cache the url  without errors', function(done){
             url.set(html, false, function(err, res) {
                 if(err) return done(err);
                 setted = res;
@@ -95,7 +85,7 @@ function SET_URL_FALSE(url, html) {
 }
 
 function URL_DETAILS(url, expectedUrl, expectedClassification, expectedDomain) {
-    describe('some validation ', function(){
+    describe('some validation for ' + url.getDomain() + url.getUrl(), function(){
         it(' classification check & url name check ', function() {
             expect(url.getUrl()).eql(expectedUrl);
             expect(url.getCategory()).eql(expectedClassification);
@@ -107,7 +97,6 @@ function URL_DETAILS(url, expectedUrl, expectedClassification, expectedDomain) {
         }
     });
 }
-
 
 function HAS_DOMAIN(domain, cacheEngine) {
     describe(domain +' should exist', function() {
@@ -176,15 +165,15 @@ function GET_URLS(domain, cacheEngine, expectedUrls) {
 
 function DELETE_ALL(cacheEngine) {
 
-    describe('Clearing all domains ', function() {
+    describe('Clearing all domains by calling clearInstance', function() {
         var domains ;
         it('should run clearInstance() without errors', function(done) {
-
+            //console.log('C3');
+            //console.log(cacheEngine);
             cacheEngine.clearInstance(function(err, res) {
                 if(err) return done(err);
                 done();
             });
-
         });
 
         it('runs getStoredHostNames()', function(done) {
@@ -203,10 +192,9 @@ function DELETE_ALL(cacheEngine) {
 
 }
 
-
 function SET_FORCE(url, html) {
 
-    describe('Forcing the cache for ' + url.getUrl(), function() {
+    describe('Forcing the URL cache ', function() {
 
         it('The url is forcefully cached', function(done) {
 
@@ -217,13 +205,24 @@ function SET_FORCE(url, html) {
             });
         });
 
-        HAS_URL(url);
-        URL_HAS_CONTENT(url, html);
+        HAS_URL(url );
+        URL_HAS_CONTENT(url,  html);
     })
 
 }
 
+function WAIT_GET_URLS (cacheEngine, time, domain, urlExpected) {
+    describe('Waits ' + time , function() {
 
+        it('waiting...', function(done) {
+            setTimeout(function() {
+                done();
+            }, time);
+        });
+
+    });
+    GET_URLS(domain, cacheEngine, urlExpected);
+}
 
 module.exports.WAIT_GET_URLS = WAIT_GET_URLS;
 module.exports.DELETE_ALL = DELETE_ALL;
@@ -236,6 +235,53 @@ module.exports.SET_URL_FALSE = SET_URL_FALSE;
 module.exports.WAIT_HAS_NOT_URL = WAIT_HAS_NOT_URL;
 module.exports.SET_URL = SET_URL;
 module.exports.DELETE_URL = DELETE_URL;
+
+//Dont need context sharing
+function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
+
+    describe('Creating a new Config for '+ instanceName, function () {
+
+        var creator;
+
+        it('We delete redis Exiting Cache Config', function (done) {
+            const client = redis.createClient(storageConfig);
+
+            client.hdel('url-cache:ruleconfig', instanceName, function (err) {
+                if (err) return done(err);
+                done();
+            });
+        });
+
+        it('should create the CacheRuleCreator ok', function (done) {
+
+            creator = new CacheRulesCreator(instanceName, storageConfig, function (err) {
+                if (err) return done(err);
+                done();
+            });
+        });
+
+        it('should create the new cache rule ok', function (done) {
+
+            creator.importRules(cacheRules, err => {
+                if (err) return done(err);
+                done();
+            });
+        });
+
+        it('should complain about the fact that a Cache Config already exists', function () {
+
+            creator.importRules(cacheRules, err => {
+                if (err) return done();
+                if (!err) done('Should be refused');
+            });
+        });
+
+    });
+}
+
+
+
+module.exports.RECREATE_CONFIG = RECREATE_CONFIG;
 
 //Attomics
 
@@ -255,9 +301,8 @@ function HAS_URL (url) {
     });
 }
 
-
 function DELETE_URL_REJECTED(url) {
-    it('Should reject the deletion of '+ url.getUrl(), function(done) {
+    it('Should reject the deletion of the url', function(done) {
         url.delete(function(err) {
             if(!err) {done('err')}
             else{
@@ -286,8 +331,7 @@ function HAS_NOT_URL (url) {
 
 function URL_HAS_CONTENT(url, html) {
     var urlContent;
-    it('The URL get Should resolve(true) ' + url.getUrl(), function(done) {
-
+    it('The URL get Should resolve(true) ', function(done) {
         url.get(function(err, res) {
             if(err) return done(err);
             urlContent = res;
@@ -301,7 +345,7 @@ function URL_HAS_CONTENT(url, html) {
 }
 
 function URL_GET_REJECTED(url) {
-    it('The url.get() should reject() ' + url.getUrl(), function(done) {
+    it('The url.get() should reject() ', function(done) {
         url.get(function(err) {
             if(!err) {done('err')}
             else{

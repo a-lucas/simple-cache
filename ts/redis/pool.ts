@@ -67,34 +67,10 @@ export class RedisPool {
             RedisPool._pool[instanceName].end();
         }
     }
-
-    constructor(instanceName: string, config: RedisStorageConfig, cb?:Function) {
-        this.instanceName = instanceName;
-        RedisPool.connect(instanceName, config, (err) => {
-            debug('redisPool.connect CB called');
-            if(err) return cb(err);
-            return cb();
-        });
-    }
-
-    getConnection(): redis.RedisClient {
-        return RedisPool._pool[this.instanceName];
-    }
-
     static getConnection(instanceName: string): redis.RedisClient {
         if ( RedisPool._status[instanceName].online ) {
             return RedisPool._pool[instanceName];
         }
         debug('Redis Pool isn\'t online yet')
-    }
-
-    isOnline():boolean {
-        return RedisPool._status[this.instanceName].online;
-    }
-
-    kill() {
-        if (RedisPool._status[this.instanceName].online === true) {
-            RedisPool._pool[this.instanceName].end();
-        }
     }
 }

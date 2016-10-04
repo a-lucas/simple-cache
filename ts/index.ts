@@ -1,7 +1,7 @@
-import CacheEnginePromise from './cacheEnginePromise';
-import CacheEngineCB from './cacheEngineCB';
+import CacheEnginePromise from './cacheEngine/cacheEnginePromise';
+import CacheEngineCB from './cacheEngine/cacheEngineCB';
 import Instance from './instance';
-import CacheRulesCreator from './CacheRulesCreator';
+import CacheRulesCreator from './rules/CacheRulesCreator';
 
 module.exports.CacheEnginePromise = CacheEnginePromise;
 

@@ -49,7 +49,7 @@ module.exports =
 	var cacheEnginePromise_1 = __webpack_require__(1);
 	var cacheEngineCB_1 = __webpack_require__(13);
 	var instance_1 = __webpack_require__(14);
-	var CacheRulesCreator_1 = __webpack_require__(17);
+	var CacheRulesCreator_1 = __webpack_require__(16);
 	module.exports.CacheEnginePromise = cacheEnginePromise_1.default;
 	module.exports.CacheEngineCB = cacheEngineCB_1.default;
 	module.exports.Instance = instance_1.default;
@@ -132,7 +132,7 @@ module.exports =
 	        if (parsedURL.domain.length === 0) {
 	            parsedURL.domain = this.defaultDomain;
 	        }
-	        var cache = new cache_1.CachePromise(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+	        var cache = new cache_1.UrlPromise(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
 	        this.addUrl(cache);
 	        return cache;
 	    };
@@ -323,8 +323,8 @@ module.exports =
 	};
 	var helpers_1 = __webpack_require__(3);
 	var debug = __webpack_require__(5)('simple-url-cache');
-	var CacheCommon = (function () {
-	    function CacheCommon(_domain, _storageInstance, _instanceName, _url) {
+	var UrlCommon = (function () {
+	    function UrlCommon(_domain, _storageInstance, _instanceName, _url) {
 	        var _this = this;
 	        this._domain = _domain;
 	        this._instanceName = _instanceName;
@@ -335,40 +335,36 @@ module.exports =
 	            return u.regex.test(_this._url);
 	        };
 	        if (this.hasPromise(_storageInstance)) {
-	            this._storageInstancePromise = _storageInstance;
-	            this._storageInstance = _storageInstance;
+	            this._storagePromise = _storageInstance;
+	            this._storage = _storageInstance;
 	        }
 	        else {
-	            this._storageInstanceCB = _storageInstance;
-	            this._storageInstance = _storageInstance;
+	            this._storageCB = _storageInstance;
+	            this._storage = _storageInstance;
 	        }
 	        this.setCacheCategory();
 	    }
-	    CacheCommon.prototype.hasPromise = function (storageInstance) {
-	        return storageInstance.getMethod() === 'promise';
+	    UrlCommon.prototype.hasPromise = function (storage) {
+	        return storage.getMethod() === 'promise';
 	    };
-	    CacheCommon.prototype.check = function () {
-	        this.setCacheCategory();
-	        return this;
-	    };
-	    CacheCommon.prototype.getDomain = function () {
+	    UrlCommon.prototype.getDomain = function () {
 	        return this._domain;
 	    };
-	    CacheCommon.prototype.getCategory = function () {
+	    UrlCommon.prototype.getCategory = function () {
 	        return this._category;
 	    };
-	    CacheCommon.prototype.getInstanceName = function () {
+	    UrlCommon.prototype.getInstanceName = function () {
 	        return this._instanceName;
 	    };
-	    CacheCommon.prototype.getUrl = function () {
+	    UrlCommon.prototype.getUrl = function () {
 	        return this._url;
 	    };
-	    CacheCommon.prototype.getTTL = function () {
+	    UrlCommon.prototype.getTTL = function () {
 	        return this._maxAge;
 	    };
-	    CacheCommon.prototype.setCacheCategory = function () {
+	    UrlCommon.prototype.setCacheCategory = function () {
 	        var i;
-	        var config = this._storageInstance.getCacheRules();
+	        var config = this._storage.getCacheRules();
 	        for (i in config.maxAge) {
 	            if (this.getRegexTest(config.maxAge[i]) === true) {
 	                this._category = 'maxAge';
@@ -391,22 +387,22 @@ module.exports =
 	        this._category = config.default;
 	    };
 	    ;
-	    return CacheCommon;
+	    return UrlCommon;
 	}());
-	exports.CacheCommon = CacheCommon;
-	var CachePromise = (function (_super) {
-	    __extends(CachePromise, _super);
-	    function CachePromise() {
+	exports.UrlCommon = UrlCommon;
+	var UrlPromise = (function (_super) {
+	    __extends(UrlPromise, _super);
+	    function UrlPromise() {
 	        var _this = this;
 	        _super.apply(this, arguments);
 	        this.delete = function () {
-	            return _this._storageInstancePromise.delete(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
+	            return _this._storagePromise.delete(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
 	        };
 	        this.get = function () {
-	            return _this._storageInstancePromise.get(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
+	            return _this._storagePromise.get(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
 	        };
 	        this.has = function () {
-	            return _this._storageInstancePromise.has(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
+	            return _this._storagePromise.has(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL());
 	        };
 	        this.set = function (html, force) {
 	            helpers_1.default.isStringDefined(html);
@@ -414,35 +410,35 @@ module.exports =
 	            if (typeof force === 'undefined') {
 	                force = false;
 	            }
-	            return _this._storageInstancePromise.set(_this.getDomain(), _this.getUrl(), html, _this.getCategory(), _this.getTTL(), force);
+	            return _this._storagePromise.set(_this.getDomain(), _this.getUrl(), html, _this.getCategory(), _this.getTTL(), force);
 	        };
 	    }
-	    return CachePromise;
-	}(CacheCommon));
-	exports.CachePromise = CachePromise;
-	var CacheCB = (function (_super) {
-	    __extends(CacheCB, _super);
-	    function CacheCB() {
+	    return UrlPromise;
+	}(UrlCommon));
+	exports.UrlPromise = UrlPromise;
+	var UrlCB = (function (_super) {
+	    __extends(UrlCB, _super);
+	    function UrlCB() {
 	        var _this = this;
 	        _super.apply(this, arguments);
 	        this.delete = function (cb) {
-	            _this._storageInstanceCB.delete(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
+	            _this._storageCB.delete(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
 	        };
 	        this.get = function (cb) {
-	            _this._storageInstanceCB.get(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
+	            _this._storageCB.get(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
 	        };
 	        this.has = function (cb) {
-	            _this._storageInstanceCB.has(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
+	            _this._storageCB.has(_this.getDomain(), _this.getUrl(), _this.getCategory(), _this.getTTL(), cb);
 	        };
 	        this.set = function (html, force, cb) {
 	            helpers_1.default.isStringDefined(html);
 	            helpers_1.default.isBoolean(force);
-	            _this._storageInstanceCB.set(_this.getDomain(), _this.getUrl(), html, _this.getCategory(), _this.getTTL(), force, cb);
+	            _this._storageCB.set(_this.getDomain(), _this.getUrl(), html, _this.getCategory(), _this.getTTL(), force, cb);
 	        };
 	    }
-	    return CacheCB;
-	}(CacheCommon));
-	exports.CacheCB = CacheCB;
+	    return UrlCB;
+	}(UrlCommon));
+	exports.UrlCB = UrlCB;
 
 
 /***/ },
@@ -510,24 +506,24 @@ module.exports =
 	    function __() { this.constructor = d; }
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	};
-	var interfaces_1 = __webpack_require__(9);
 	var debg = __webpack_require__(5);
 	var es6_promise_1 = __webpack_require__(2);
-	var instanceCB_1 = __webpack_require__(10);
+	var instanceCB_1 = __webpack_require__(9);
+	var storage_1 = __webpack_require__(12);
 	var debug = debg('simple-url-cache-REDIS');
-	var RedisStorageInstancePromise = (function (_super) {
-	    __extends(RedisStorageInstancePromise, _super);
-	    function RedisStorageInstancePromise(instance) {
+	var RedisStoragePromise = (function (_super) {
+	    __extends(RedisStoragePromise, _super);
+	    function RedisStoragePromise(instance) {
 	        _super.call(this);
 	        this.instance = instance;
 	        this.hashKey = 'simple-url-cache:' + instance.getInstanceName();
 	        this.cbInstance = new instanceCB_1.default(instance);
 	        this.method = 'promise';
 	    }
-	    RedisStorageInstancePromise.prototype.getCacheRules = function () {
-	        return this.instance.getCacheRuleEngine().getManager().getRules();
+	    RedisStoragePromise.prototype.getCacheRules = function () {
+	        return this.instance.getManager().getRules();
 	    };
-	    RedisStorageInstancePromise.prototype.clearCache = function () {
+	    RedisStoragePromise.prototype.clearCache = function () {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.clearCache(function (err, results) {
@@ -541,7 +537,7 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstancePromise.prototype.clearDomain = function (domain) {
+	    RedisStoragePromise.prototype.clearDomain = function (domain) {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.clearDomain(domain, function (err, results) {
@@ -555,7 +551,7 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstancePromise.prototype.getCachedDomains = function () {
+	    RedisStoragePromise.prototype.getCachedDomains = function () {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.getCachedDomains(function (err, results) {
@@ -569,7 +565,7 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstancePromise.prototype.getCachedURLs = function (domain) {
+	    RedisStoragePromise.prototype.getCachedURLs = function (domain) {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.getCachedURLs(domain, function (err, results) {
@@ -583,7 +579,7 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstancePromise.prototype.delete = function (domain, url, category, ttl) {
+	    RedisStoragePromise.prototype.delete = function (domain, url, category, ttl) {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.delete(domain, url, category, ttl, function (err, results) {
@@ -596,10 +592,10 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstancePromise.prototype.destroy = function () {
+	    RedisStoragePromise.prototype.destroy = function () {
 	        this.cbInstance.destroy();
 	    };
-	    RedisStorageInstancePromise.prototype.get = function (domain, url, category, ttl) {
+	    RedisStoragePromise.prototype.get = function (domain, url, category, ttl) {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.get(domain, url, category, ttl, function (err, results) {
@@ -613,7 +609,7 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstancePromise.prototype.has = function (domain, url, category, ttl) {
+	    RedisStoragePromise.prototype.has = function (domain, url, category, ttl) {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.has(domain, url, category, ttl, function (err, results) {
@@ -627,7 +623,7 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstancePromise.prototype.set = function (domain, url, value, category, ttl, force) {
+	    RedisStoragePromise.prototype.set = function (domain, url, value, category, ttl, force) {
 	        var _this = this;
 	        return new es6_promise_1.Promise(function (resolve, reject) {
 	            _this.cbInstance.set(domain, url, value, category, ttl, force, function (err, results) {
@@ -641,50 +637,14 @@ module.exports =
 	            });
 	        });
 	    };
-	    return RedisStorageInstancePromise;
-	}(interfaces_1.StorageInstancePromise));
+	    return RedisStoragePromise;
+	}(storage_1.StoragePromise));
 	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.default = RedisStorageInstancePromise;
+	exports.default = RedisStoragePromise;
 
 
 /***/ },
 /* 9 */
-/***/ function(module, exports) {
-
-	"use strict";
-	var __extends = (this && this.__extends) || function (d, b) {
-	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-	    function __() { this.constructor = d; }
-	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-	};
-	var StorageInstance = (function () {
-	    function StorageInstance() {
-	    }
-	    StorageInstance.prototype.getMethod = function () {
-	        return this.method;
-	    };
-	    return StorageInstance;
-	}());
-	var StorageInstancePromise = (function (_super) {
-	    __extends(StorageInstancePromise, _super);
-	    function StorageInstancePromise() {
-	        _super.apply(this, arguments);
-	    }
-	    return StorageInstancePromise;
-	}(StorageInstance));
-	exports.StorageInstancePromise = StorageInstancePromise;
-	var StorageInstanceCB = (function (_super) {
-	    __extends(StorageInstanceCB, _super);
-	    function StorageInstanceCB() {
-	        _super.apply(this, arguments);
-	    }
-	    return StorageInstanceCB;
-	}(StorageInstance));
-	exports.StorageInstanceCB = StorageInstanceCB;
-
-
-/***/ },
-/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -693,28 +653,24 @@ module.exports =
 	    function __() { this.constructor = d; }
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	};
-	var interfaces_1 = __webpack_require__(9);
-	var pool_1 = __webpack_require__(11);
+	var pool_1 = __webpack_require__(10);
 	var debg = __webpack_require__(5);
 	var CacheEngine_1 = __webpack_require__(7);
+	var storage_1 = __webpack_require__(12);
 	var debug = debg('simple-url-cache-REDIS');
-	var RedisStorageInstanceCB = (function (_super) {
-	    __extends(RedisStorageInstanceCB, _super);
-	    function RedisStorageInstanceCB(instance) {
-	        var _this = this;
+	var RedisStorageCB = (function (_super) {
+	    __extends(RedisStorageCB, _super);
+	    function RedisStorageCB(instance) {
 	        _super.call(this);
 	        this.instance = instance;
-	        new pool_1.RedisPool(instance.getInstanceName(), instance.getRedisConfig(), function (err, conn) {
-	            _this._conn = conn;
-	        });
+	        this._conn = pool_1.RedisPool.getConnection(instance.getInstanceName());
 	        this.hashKey = CacheEngine_1.default.hashKey + this.instance.getInstanceName();
 	        this.method = 'callback';
 	    }
-	    RedisStorageInstanceCB.prototype.clearCache = function (cb) {
+	    RedisStorageCB.prototype.clearCache = function (cb) {
 	        var _this = this;
-	        var client = this._conn.getConnection();
-	        var batch = client.batch();
-	        client.hkeys(this.hashKey, function (err, domains) {
+	        var batch = this._conn.batch();
+	        this._conn.hkeys(this.hashKey, function (err, domains) {
 	            debug(err);
 	            if (err)
 	                return cb(err);
@@ -725,7 +681,7 @@ module.exports =
 	            domains.forEach(function (domain) {
 	                batch.del(_this.getDomainHashKey(domain));
 	                batch.hdel(_this.hashKey, domain);
-	                client.hkeys(_this.getDomainHashKey(domain), function (err, keys) {
+	                _this._conn.hkeys(_this.getDomainHashKey(domain), function (err, keys) {
 	                    debug('keys = ', keys);
 	                    keys.forEach(function (key) {
 	                        batch.del(_this.getUrlKey(domain, key));
@@ -743,13 +699,12 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstanceCB.prototype.clearDomain = function (domain, cb) {
+	    RedisStorageCB.prototype.clearDomain = function (domain, cb) {
 	        var _this = this;
-	        var client = this._conn.getConnection();
-	        client.hdel(this.hashKey, domain, function (err) {
+	        this._conn.hdel(this.hashKey, domain, function (err) {
 	            if (err)
 	                return cb(err);
-	            client.hkeys(_this.getDomainHashKey(domain), function (err, urls) {
+	            _this._conn.hkeys(_this.getDomainHashKey(domain), function (err, urls) {
 	                if (urls.length === 0) {
 	                    return cb(null, true);
 	                }
@@ -767,18 +722,17 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstanceCB.prototype.getCachedDomains = function (cb) {
-	        this._conn.getConnection().hkeys(this.hashKey, function (err, results) {
+	    RedisStorageCB.prototype.getCachedDomains = function (cb) {
+	        this._conn.hkeys(this.hashKey, function (err, results) {
 	            if (err)
 	                return cb(err);
 	            return cb(null, results);
 	        });
 	    };
-	    RedisStorageInstanceCB.prototype.getCachedURLs = function (domain, cb) {
+	    RedisStorageCB.prototype.getCachedURLs = function (domain, cb) {
 	        var _this = this;
-	        var client = this._conn.getConnection();
 	        var cachedUrls = [];
-	        client.hkeys(this.getDomainHashKey(domain), function (err, urls) {
+	        this._conn.hkeys(this.getDomainHashKey(domain), function (err, urls) {
 	            if (err)
 	                return cb(err);
 	            if (urls.length === 0) {
@@ -786,7 +740,7 @@ module.exports =
 	            }
 	            var nb = 0;
 	            urls.forEach(function (url) {
-	                client.get(_this.getUrlKey(domain, url), function (err, data) {
+	                _this._conn.get(_this.getUrlKey(domain, url), function (err, data) {
 	                    if (err)
 	                        return cb(err);
 	                    if (data !== null) {
@@ -797,7 +751,7 @@ module.exports =
 	                        }
 	                    }
 	                    else {
-	                        client.hdel(_this.getDomainHashKey(domain), url, function (err) {
+	                        _this._conn.hdel(_this.getDomainHashKey(domain), url, function (err) {
 	                            if (err)
 	                                return cb(err);
 	                            nb++;
@@ -810,22 +764,21 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstanceCB.prototype.getCacheRules = function () {
-	        return this.instance.getCacheRuleEngine().getManager().getRules();
+	    RedisStorageCB.prototype.getCacheRules = function () {
+	        return this.instance.getManager().getRules();
 	    };
-	    RedisStorageInstanceCB.prototype.delete = function (domain, url, category, ttl, cb) {
+	    RedisStorageCB.prototype.delete = function (domain, url, category, ttl, cb) {
 	        var _this = this;
-	        var client = this._conn.getConnection();
 	        this.has(domain, url, category, ttl, function (err, isCached) {
 	            if (!isCached) {
 	                return cb('url is not cached');
 	            }
 	            else {
-	                client.del(_this.getUrlKey(domain, url), function (err) {
+	                _this._conn.del(_this.getUrlKey(domain, url), function (err) {
 	                    if (err) {
 	                        return cb(err);
 	                    }
-	                    client.hdel(_this.getDomainHashKey(domain), url, function (err) {
+	                    _this._conn.hdel(_this.getDomainHashKey(domain), url, function (err) {
 	                        if (err) {
 	                            return cb(err);
 	                        }
@@ -835,23 +788,22 @@ module.exports =
 	            }
 	        });
 	    };
-	    RedisStorageInstanceCB.prototype.destroy = function () {
-	        this._conn.kill();
+	    RedisStorageCB.prototype.destroy = function () {
+	        pool_1.RedisPool.kill(this.instance.getInstanceName());
 	    };
-	    RedisStorageInstanceCB.prototype.get = function (domain, url, category, ttl, cb) {
+	    RedisStorageCB.prototype.get = function (domain, url, category, ttl, cb) {
 	        var _this = this;
-	        var client = this._conn.getConnection();
-	        client.hget(this.getDomainHashKey(domain), url, function (err, content) {
+	        this._conn.hget(this.getDomainHashKey(domain), url, function (err, content) {
 	            if (err)
 	                return cb(err);
 	            if (content === null) {
 	                return cb('url not cached');
 	            }
-	            client.get(_this.getUrlKey(domain, url), function (err, timestamp) {
+	            _this._conn.get(_this.getUrlKey(domain, url), function (err, timestamp) {
 	                if (err)
 	                    return cb(err);
 	                if (timestamp === null) {
-	                    client.hdel(_this.getDomainHashKey(domain), _this.getUrlKey(domain, url), function (err) {
+	                    _this._conn.hdel(_this.getDomainHashKey(domain), _this.getUrlKey(domain, url), function (err) {
 	                        if (err)
 	                            return cb(err);
 	                        return cb('url not cached - cleaning timestamp informations');
@@ -863,10 +815,9 @@ module.exports =
 	            });
 	        });
 	    };
-	    RedisStorageInstanceCB.prototype.has = function (domain, url, category, ttl, cb) {
+	    RedisStorageCB.prototype.has = function (domain, url, category, ttl, cb) {
 	        var _this = this;
-	        var client = this._conn.getConnection();
-	        client.get(this.getUrlKey(domain, url), function (err, data) {
+	        this._conn.get(this.getUrlKey(domain, url), function (err, data) {
 	            if (err) {
 	                debug('Error while querying is cached on redis: ', domain, url, err);
 	                return cb(err);
@@ -874,7 +825,7 @@ module.exports =
 	            else {
 	                var isCached = data !== null;
 	                if (!isCached) {
-	                    client.hdel(_this.getDomainHashKey(domain), url, function (err) {
+	                    _this._conn.hdel(_this.getDomainHashKey(domain), url, function (err) {
 	                        if (err)
 	                            return cb(err);
 	                        return cb(null, false);
@@ -886,7 +837,7 @@ module.exports =
 	            }
 	        });
 	    };
-	    RedisStorageInstanceCB.prototype.set = function (domain, url, value, category, ttl, force, cb) {
+	    RedisStorageCB.prototype.set = function (domain, url, value, category, ttl, force, cb) {
 	        var _this = this;
 	        if (force === true) {
 	            var ttl_1 = 0;
@@ -917,34 +868,33 @@ module.exports =
 	        }
 	    };
 	    ;
-	    RedisStorageInstanceCB.prototype.getDomainHashKey = function (domain) {
+	    RedisStorageCB.prototype.getDomainHashKey = function (domain) {
 	        return this.hashKey + ':' + domain;
 	    };
-	    RedisStorageInstanceCB.prototype.store = function (domain, url, value, ttl, force, cb) {
+	    RedisStorageCB.prototype.store = function (domain, url, value, ttl, force, cb) {
 	        var _this = this;
-	        var client = this._conn.getConnection();
-	        client.hset(this.hashKey, domain, domain, function (err) {
+	        this._conn.hset(this.hashKey, domain, domain, function (err) {
 	            if (err) {
 	                return cb(err);
 	            }
 	            else {
-	                client.hset(_this.getDomainHashKey(domain), url, value, function (err, exists) {
+	                _this._conn.hset(_this.getDomainHashKey(domain), url, value, function (err, exists) {
 	                    if (err) {
 	                        return cb(err);
 	                    }
 	                    if (exists === 0) {
 	                        return cb(null, true);
 	                    }
-	                    client.get(_this.getUrlKey(domain, url), function (err, result) {
+	                    _this._conn.get(_this.getUrlKey(domain, url), function (err, result) {
 	                        if (err) {
 	                            return cb(err);
 	                        }
 	                        if (result === null) {
-	                            client.set(_this.getUrlKey(domain, url), Date.now(), function (err) {
+	                            _this._conn.set(_this.getUrlKey(domain, url), Date.now(), function (err) {
 	                                if (err)
 	                                    return cb(err);
 	                                if (ttl > 0) {
-	                                    client.expire(_this.getUrlKey(domain, url), ttl, function (err) {
+	                                    _this._conn.expire(_this.getUrlKey(domain, url), ttl, function (err) {
 	                                        if (err)
 	                                            return cb(err);
 	                                        return cb(null, true);
@@ -957,7 +907,7 @@ module.exports =
 	                        }
 	                        else if (force === true) {
 	                            if (ttl > 0) {
-	                                client.expire(_this.getUrlKey(domain, url), ttl, function (err) {
+	                                _this._conn.expire(_this.getUrlKey(domain, url), ttl, function (err) {
 	                                    if (err)
 	                                        return cb(err);
 	                                    return cb(null, true);
@@ -972,32 +922,25 @@ module.exports =
 	            }
 	        });
 	    };
-	    RedisStorageInstanceCB.prototype.getUrlKey = function (domain, url) {
+	    RedisStorageCB.prototype.getUrlKey = function (domain, url) {
 	        return this.getDomainHashKey(domain) + ':' + url;
 	    };
-	    return RedisStorageInstanceCB;
-	}(interfaces_1.StorageInstanceCB));
+	    return RedisStorageCB;
+	}(storage_1.StorageCB));
 	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.default = RedisStorageInstanceCB;
+	exports.default = RedisStorageCB;
 
 
 /***/ },
-/* 11 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
-	var redis = __webpack_require__(12);
+	var redis = __webpack_require__(11);
 	var dbug = __webpack_require__(5);
 	var debug = dbug('simple-url-cache-REDIS');
 	var RedisPool = (function () {
-	    function RedisPool(instanceName, config, cb) {
-	        this.instanceName = instanceName;
-	        RedisPool.connect(instanceName, config, function (err) {
-	            debug('redisPool.connect CB called');
-	            if (err)
-	                return cb(err);
-	            return cb();
-	        });
+	    function RedisPool() {
 	    }
 	    RedisPool.connect = function (instanceName, config, cb) {
 	        if (typeof RedisPool._pool[instanceName] === 'undefined' ||
@@ -1045,22 +988,11 @@ module.exports =
 	            RedisPool._pool[instanceName].end();
 	        }
 	    };
-	    RedisPool.prototype.getConnection = function () {
-	        return RedisPool._pool[this.instanceName];
-	    };
 	    RedisPool.getConnection = function (instanceName) {
 	        if (RedisPool._status[instanceName].online) {
 	            return RedisPool._pool[instanceName];
 	        }
 	        debug('Redis Pool isn\'t online yet');
-	    };
-	    RedisPool.prototype.isOnline = function () {
-	        return RedisPool._status[this.instanceName].online;
-	    };
-	    RedisPool.prototype.kill = function () {
-	        if (RedisPool._status[this.instanceName].online === true) {
-	            RedisPool._pool[this.instanceName].end();
-	        }
 	    };
 	    RedisPool._pool = {};
 	    RedisPool._status = {};
@@ -1070,10 +1002,46 @@ module.exports =
 
 
 /***/ },
-/* 12 */
+/* 11 */
 /***/ function(module, exports) {
 
 	module.exports = require("redis");
+
+/***/ },
+/* 12 */
+/***/ function(module, exports) {
+
+	"use strict";
+	var __extends = (this && this.__extends) || function (d, b) {
+	    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+	    function __() { this.constructor = d; }
+	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+	};
+	var Storage = (function () {
+	    function Storage() {
+	    }
+	    Storage.prototype.getMethod = function () {
+	        return this.method;
+	    };
+	    return Storage;
+	}());
+	var StoragePromise = (function (_super) {
+	    __extends(StoragePromise, _super);
+	    function StoragePromise() {
+	        _super.apply(this, arguments);
+	    }
+	    return StoragePromise;
+	}(Storage));
+	exports.StoragePromise = StoragePromise;
+	var StorageCB = (function (_super) {
+	    __extends(StorageCB, _super);
+	    function StorageCB() {
+	        _super.apply(this, arguments);
+	    }
+	    return StorageCB;
+	}(Storage));
+	exports.StorageCB = StorageCB;
+
 
 /***/ },
 /* 13 */
@@ -1085,11 +1053,11 @@ module.exports =
 	    function __() { this.constructor = d; }
 	    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 	};
-	var instanceCB_1 = __webpack_require__(10);
+	var instanceCB_1 = __webpack_require__(9);
 	var helpers_1 = __webpack_require__(3);
-	var dbug = __webpack_require__(5);
 	var cache_1 = __webpack_require__(6);
 	var CacheEngine_1 = __webpack_require__(7);
+	var dbug = __webpack_require__(5);
 	var debug = dbug('simple-url-cache');
 	var CacheEngineCB = (function (_super) {
 	    __extends(CacheEngineCB, _super);
@@ -1116,7 +1084,7 @@ module.exports =
 	        if (parsedURL.domain.length === 0) {
 	            parsedURL.domain = this.defaultDomain;
 	        }
-	        var cache = new cache_1.CacheCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
+	        var cache = new cache_1.UrlCB(parsedURL.domain, this.storageInstance, this.instanceName, parsedURL.relativeURL);
 	        this.addUrl(cache);
 	        return cache;
 	    };
@@ -1131,9 +1099,10 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
-	var CacheRuleEngine_1 = __webpack_require__(15);
 	var helpers_1 = __webpack_require__(3);
-	var pool_1 = __webpack_require__(11);
+	var pool_1 = __webpack_require__(10);
+	var CacheEngine_1 = __webpack_require__(7);
+	var CacheRuleManager_1 = __webpack_require__(15);
 	var debug = __webpack_require__(5)('simple-url-cache');
 	var Instance = (function () {
 	    function Instance(instanceName, redisConfig, config, cb) {
@@ -1145,25 +1114,58 @@ module.exports =
 	        this.instanciated = false;
 	        helpers_1.default.isNotUndefined(instanceName, redisConfig, config, cb);
 	        this.config = Object.assign({ on_existing_regex: 'replace', on_publish_update: false }, config);
-	        new pool_1.RedisPool(instanceName, redisConfig, function (err) {
+	        pool_1.RedisPool.connect(instanceName, redisConfig, function (err) {
 	            if (err)
 	                cb('Error connecting to REDIS: ' + err);
-	            _this.ruleEngine = new CacheRuleEngine_1.default(instanceName, _this.config, function (err) {
+	            var redisConn = pool_1.RedisPool.getConnection(instanceName);
+	            redisConn.hget(helpers_1.default.getConfigKey(), _this.instanceName, function (err, data) {
 	                if (err)
-	                    return cb(err);
-	                _this.instanciated = true;
-	                cb();
+	                    cb('Redis error - retrieving ' + helpers_1.default.getConfigKey() + ' -> ' + err);
+	                if (data === null) {
+	                    cb('No CacheRule defined for this instance ' + _this.instanceName);
+	                }
+	                else {
+	                    _this.instanciated = true;
+	                    var parsedData = JSON.parse(data, helpers_1.default.JSONRegExpReviver);
+	                    _this.manager = new CacheRuleManager_1.default(parsedData, config.on_existing_regex);
+	                    cb(null);
+	                }
 	            });
 	        });
 	    }
+	    Instance.prototype.getChannel = function () {
+	        return helpers_1.default.getConfigKey() + this.instanceName;
+	    };
+	    Instance.prototype.publish = function () {
+	        CacheEngine_1.default.updateAllUrlCategory(this.instanceName);
+	        var redisConn = pool_1.RedisPool.getConnection(this.instanceName);
+	        var stringified = JSON.stringify(this.manager.getRules(), helpers_1.default.JSONRegExpReplacer, 2);
+	        redisConn.hset(helpers_1.default.getConfigKey(), this.instanceName, stringified, function (err) {
+	            if (err)
+	                helpers_1.default.RedisError('while publishing config ' + stringified, err);
+	        });
+	    };
+	    Instance.prototype.onPublish = function () {
+	        var _this = this;
+	        var redisConn = pool_1.RedisPool.getConnection(this.instanceName);
+	        redisConn.hget(helpers_1.default.getConfigKey(), this.instanceName, function (err, data) {
+	            if (err)
+	                throw new Error('Redis error - retrieving ' + helpers_1.default.getConfigKey());
+	            if (data === null) {
+	                throw new Error('Big mess');
+	            }
+	            var parsedData = JSON.parse(data, helpers_1.default.JSONRegExpReviver);
+	            _this.manager.updateRules(parsedData);
+	        });
+	    };
+	    Instance.prototype.getManager = function () {
+	        return this.manager;
+	    };
 	    Instance.prototype.getConfig = function () {
 	        return this.config;
 	    };
 	    Instance.prototype.getInstanceName = function () {
 	        return this.instanceName;
-	    };
-	    Instance.prototype.getCacheRuleEngine = function () {
-	        return this.ruleEngine;
 	    };
 	    Instance.prototype.getRedisConfig = function () {
 	        return this.redisConfig;
@@ -1183,77 +1185,12 @@ module.exports =
 
 	"use strict";
 	var helpers_1 = __webpack_require__(3);
-	var pool_1 = __webpack_require__(11);
-	var CacheRuleManager_1 = __webpack_require__(16);
-	var CacheEngine_1 = __webpack_require__(7);
-	var debug = __webpack_require__(5)('simple-url-cache-RULE');
-	var CacheRuleEngine = (function () {
-	    function CacheRuleEngine(instanceName, config, cb) {
-	        var _this = this;
-	        this.instanceName = instanceName;
-	        this._conn = pool_1.RedisPool.getConnection(instanceName);
-	        this._conn.hget(helpers_1.default.getConfigKey(), this.instanceName, function (err, data) {
-	            if (err)
-	                throw new Error('Redis error - retrieving ' + helpers_1.default.getConfigKey() + ' -> ' + err);
-	            if (data === null) {
-	                cb('No CacheRule defined for this instance ' + _this.instanceName);
-	            }
-	            else {
-	                var parsedData = JSON.parse(data, helpers_1.default.JSONRegExpReviver);
-	                _this.manager = new CacheRuleManager_1.default(parsedData, config.on_existing_regex);
-	                cb(null);
-	            }
-	        });
-	    }
-	    CacheRuleEngine.prototype.getChannel = function () {
-	        return helpers_1.default.getConfigKey() + this.instanceName;
-	    };
-	    CacheRuleEngine.prototype.publish = function () {
-	        var _this = this;
-	        CacheEngine_1.default.updateAllUrlCategory(this.instanceName);
-	        var stringified = JSON.stringify(this.manager.getRules(), helpers_1.default.JSONRegExpReplacer, 2);
-	        this._conn.hset(helpers_1.default.getConfigKey(), this.instanceName, stringified, function (err) {
-	            if (err)
-	                helpers_1.default.RedisError('while publishing config ' + stringified, err);
-	            _this._conn.publish(_this.getChannel(), 'PUSHED');
-	        });
-	    };
-	    CacheRuleEngine.prototype.onPublish = function () {
-	        var _this = this;
-	        this._conn.hget(helpers_1.default.getConfigKey(), this.instanceName, function (err, data) {
-	            if (err)
-	                throw new Error('Redis error - retrieving ' + helpers_1.default.getConfigKey());
-	            if (data === null) {
-	                throw new Error('Big mess');
-	            }
-	            var parsedData = JSON.parse(data, helpers_1.default.JSONRegExpReviver);
-	            _this.manager.updateRules(parsedData);
-	        });
-	    };
-	    CacheRuleEngine.prototype.getManager = function () {
-	        return this.manager;
-	    };
-	    return CacheRuleEngine;
-	}());
-	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.default = CacheRuleEngine;
-
-
-/***/ },
-/* 16 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	var helpers_1 = __webpack_require__(3);
 	var debug = __webpack_require__(5)('simple-url-cache');
 	var CacheRuleManager = (function () {
 	    function CacheRuleManager(cacheRules, on_existing_regex) {
 	        this.cacheRules = cacheRules;
 	        this.on_existing_regex = on_existing_regex;
 	    }
-	    CacheRuleManager.prototype.updateRules = function (cacheRules) {
-	        this.cacheRules = cacheRules;
-	    };
 	    CacheRuleManager.prototype.addMaxAgeRule = function (regex, maxAge) {
 	        helpers_1.default.isNotUndefined(regex, maxAge);
 	        helpers_1.default.isRegexRule(regex);
@@ -1272,6 +1209,9 @@ module.exports =
 	        helpers_1.default.isRegexRule(regex);
 	        var found = this.findRegex(regex);
 	        this.add({ regex: regex }, 'always', found);
+	    };
+	    CacheRuleManager.prototype.getRules = function () {
+	        return this.cacheRules;
 	    };
 	    CacheRuleManager.prototype.mergeWith = function (rules) {
 	    };
@@ -1296,22 +1236,22 @@ module.exports =
 	    CacheRuleManager.prototype.removeAllAlwaysRules = function () {
 	        this.cacheRules.always = [];
 	    };
-	    CacheRuleManager.prototype.getRules = function () {
-	        return this.cacheRules;
+	    CacheRuleManager.prototype.updateRules = function (cacheRules) {
+	        this.cacheRules = cacheRules;
 	    };
 	    CacheRuleManager.prototype.findRegex = function (regex) {
 	        var _this = this;
-	        var info = null;
-	        ['always', 'never', 'maxAge'].some(function (type) {
-	            _this.cacheRules[type].some(function (rule, index) {
-	                if (helpers_1.default.SameRegex(rule.regex, regex)) {
+	        var info = null, index, rule;
+	        ['always', 'never', 'maxAge'].forEach(function (type) {
+	            for (index = 0; index < _this.cacheRules[type].length; index++) {
+	                if (helpers_1.default.SameRegex(_this.cacheRules[type][index].regex, regex)) {
 	                    info = {
 	                        type: type,
 	                        index: index
 	                    };
-	                    return true;
+	                    break;
 	                }
-	            });
+	            }
 	        });
 	        return info;
 	    };
@@ -1339,37 +1279,42 @@ module.exports =
 
 
 /***/ },
-/* 17 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
-	var pool_1 = __webpack_require__(11);
+	var pool_1 = __webpack_require__(10);
 	var helpers_1 = __webpack_require__(3);
 	var CacheRulesCreator = (function () {
-	    function CacheRulesCreator(instanceName, redisConfig) {
+	    function CacheRulesCreator(instanceName, redisConfig, cb) {
+	        var _this = this;
 	        this.instanceName = instanceName;
 	        this.redisConfig = redisConfig;
-	        this._conn = new pool_1.RedisPool(instanceName, redisConfig, function (err) {
+	        helpers_1.default.isNotUndefined(instanceName, redisConfig, cb);
+	        pool_1.RedisPool.connect(instanceName, redisConfig, function (err) {
 	            if (err)
-	                throw new Error('Error connecting to REDIS');
+	                cb('Error connecting to REDIS');
+	            _this._conn = pool_1.RedisPool.getConnection(instanceName);
+	            cb(null);
 	        });
 	    }
 	    CacheRulesCreator.prototype.importRules = function (rules, cb) {
 	        var _this = this;
+	        helpers_1.default.isNotUndefined(rules, cb);
 	        helpers_1.default.validateCacheConfig(rules);
-	        this._conn.getConnection().hget(helpers_1.default.getConfigKey(), this.instanceName, function (err, data) {
+	        this._conn.hget(helpers_1.default.getConfigKey(), this.instanceName, function (err, data) {
 	            if (err)
-	                throw new Error('Redis error - retrieving ' + helpers_1.default.getConfigKey());
+	                cb('Redis error - retrieving ' + helpers_1.default.getConfigKey() + ': ' + err);
 	            if (data !== null) {
 	                cb('A CacheRule definition already exists for this instance');
 	            }
 	            else {
 	                var stringified = JSON.stringify(rules, helpers_1.default.JSONRegExpReplacer, 2);
-	                _this._conn.getConnection().hset(helpers_1.default.getConfigKey(), _this.instanceName, stringified, function (err) {
+	                _this._conn.hset(helpers_1.default.getConfigKey(), _this.instanceName, stringified, function (err) {
 	                    if (err)
 	                        cb(err);
+	                    cb(null);
 	                });
-	                cb(null);
 	            }
 	        });
 	    };

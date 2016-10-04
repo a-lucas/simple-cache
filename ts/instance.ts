@@ -1,12 +1,15 @@
 import {RedisStorageConfig, InstanceConfig} from "./interfaces";
-import CacheRuleEngine from "./CacheRuleEngine";
 import Helpers from "./helpers";
 import {RedisPool} from "./redis/pool";
+import CacheEngine from './cacheEngine/CacheEngine';
+import CacheRuleManager from './rules/CacheRuleManager';
+
 const debug = require('debug')('simple-url-cache');
 
 export default class Instance {
-    public ruleEngine:CacheRuleEngine;
+
     private instanciated: boolean = false;
+    private manager: CacheRuleManager;
 
     constructor(private instanceName: string,
                 private redisConfig: RedisStorageConfig,
@@ -17,15 +20,59 @@ export default class Instance {
 
         this.config = (<any>Object).assign({on_existing_regex: 'replace', on_publish_update: false  }, config);
 
-        new RedisPool(instanceName, redisConfig, (err) => {
+         RedisPool.connect(instanceName, redisConfig, (err) => {
             if(err) cb('Error connecting to REDIS: ' + err);
-            this.ruleEngine = new CacheRuleEngine(instanceName, this.config, (err) => {
-                if(err) return cb(err);
-                this.instanciated = true;
-                cb();
+
+            const redisConn = RedisPool.getConnection(instanceName);
+            //from cache rule engine
+            redisConn.hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
+                if (err) cb('Redis error - retrieving ' + Helpers.getConfigKey() + ' -> ' + err);
+                if (data === null) {
+                    cb('No CacheRule defined for this instance ' + this.instanceName);
+                } else {
+                    this.instanciated = true;
+                    const parsedData = JSON.parse(data, Helpers.JSONRegExpReviver);
+                    this.manager = new CacheRuleManager(parsedData, config.on_existing_regex);
+                    cb(null);
+                }
             });
         });
     }
+
+    private getChannel(): string {
+        return Helpers.getConfigKey() + this.instanceName;
+    }
+
+    publish() {
+
+        CacheEngine.updateAllUrlCategory(this.instanceName);
+
+        const redisConn = RedisPool.getConnection(this.instanceName);
+
+        const stringified = JSON.stringify(this.manager.getRules(), Helpers.JSONRegExpReplacer, 2);
+        redisConn.hset(Helpers.getConfigKey(), this.instanceName, stringified, (err) => {
+            if(err) Helpers.RedisError('while publishing config ' + stringified, err);
+            //redisConn.publish(this.getChannel(), 'PUSHED');
+        });
+    }
+
+    onPublish() {
+        const redisConn = RedisPool.getConnection(this.instanceName);
+
+        redisConn.hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
+            if (err) throw new Error('Redis error - retrieving ' + Helpers.getConfigKey());
+            if (data === null) {
+                throw new Error('Big mess');
+            }
+            const parsedData = JSON.parse(data, Helpers.JSONRegExpReviver)
+            this.manager.updateRules(parsedData);
+        });
+    }
+
+    getManager(): CacheRuleManager {
+        return this.manager;
+    }
+
 
     getConfig(): InstanceConfig {
         return this.config;
@@ -33,10 +80,6 @@ export default class Instance {
 
     getInstanceName():string {
         return this.instanceName;
-    }
-
-    getCacheRuleEngine(): CacheRuleEngine {
-        return this.ruleEngine;
     }
 
     getRedisConfig(): RedisStorageConfig {

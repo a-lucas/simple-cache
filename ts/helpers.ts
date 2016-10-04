@@ -1,6 +1,6 @@
 import {RedisStorageConfig, parsedURL} from './interfaces';
 import * as nodeurl from 'url';
-import CacheEngine from "./CacheEngine";
+import CacheEngine from "./cacheEngine/CacheEngine";
 
 export default class Helpers {
 
