@@ -49,29 +49,51 @@ export class UrlCommon {
         return this._maxAge;
     }
 
+    private checkDomain(stored: string | RegExp): boolean {
+        if(typeof stored === 'string') {
+            return this._domain.indexOf(stored) !== -1;
+        }else {
+            return stored.test(this._domain);
+        }
+
+    }
     public setCacheCategory(): void  {
-        let i;
+        let key,
+            domain,
+            i;
         const config = this._storage.getCacheRules();
 
-        for (i in config.maxAge) {
-            if (this.getRegexTest (config.maxAge[i]) === true) {
-                this._category = 'maxAge';
-                this._maxAge = config.maxAge[i].maxAge;
-                return;
+        for (key=0; key < config.maxAge.length; key++) {
+            if (this.checkDomain(config.maxAge[key].domain)) {
+                for(i = 0; i< config.maxAge[key].rules.length; i++ ) {
+                    if (this.getRegexTest (config.maxAge[key].rules[i]) === true) {
+                        this._category = 'maxAge';
+                        this._maxAge = config.maxAge[key].rules[i].maxAge;
+                        return;
+                    }
+                }
             }
         }
 
-        for (i in config.always) {
-            if (this.getRegexTest (config.always[i]) === true) {
-                this._category = 'always';
-                return;
+        for (key=0; key < config.always.length; key++) {
+            if (this.checkDomain(config.always[key].domain)) {
+                for(i = 0; i< config.always[key].rules.length; i++ ) {
+                    if (this.getRegexTest (config.always[key].rules[i]) === true) {
+                        this._category = 'always';
+                        return;
+                    }
+                }
             }
         }
 
-        for (i in config.never) {
-            if (this.getRegexTest (config.never[i]) === true) {
-                this._category = 'never';
-                return;
+        for (key=0; key < config.never.length; key++) {
+            if (this.checkDomain(config.never[key].domain)) {
+                for(i = 0; i< config.never[key].rules.length; i++ ) {
+                    if (this.getRegexTest (config.never[key].rules[i]) === true) {
+                        this._category = 'never';
+                        return;
+                    }
+                }
             }
         }
 
@@ -95,7 +117,6 @@ export class UrlPromise extends UrlCommon {
     get = (): Promise<string> => {
         return this._storagePromise.get(this.getDomain(), this.getUrl(), this.getCategory(), this.getTTL());
     };
-
 
     has = (): Promise<boolean> => {
         return this._storagePromise.has(this.getDomain(), this.getUrl(), this.getCategory(), this.getTTL());

@@ -33,9 +33,20 @@ export default class Instance {
                     this.instanciated = true;
                     const parsedData = JSON.parse(data, Helpers.JSONRegExpReviver);
                     this.manager = new CacheRuleManager(parsedData, config.on_existing_regex);
+                    this.launchSubscriber();
                     cb(null);
                 }
             });
+        });
+    }
+
+    private launchSubscriber(): void {
+        const subscriber = RedisPool.getSubscriberConnection(this.instanceName);
+        subscriber.subscribe(this.getChannel());
+        subscriber.on('message', (channel, message) => {
+            if(message === 'PUSHED') {
+                this.onPublish();
+            }
         });
     }
 
@@ -52,7 +63,7 @@ export default class Instance {
         const stringified = JSON.stringify(this.manager.getRules(), Helpers.JSONRegExpReplacer, 2);
         redisConn.hset(Helpers.getConfigKey(), this.instanceName, stringified, (err) => {
             if(err) Helpers.RedisError('while publishing config ' + stringified, err);
-            //redisConn.publish(this.getChannel(), 'PUSHED');
+            redisConn.publish(this.getChannel(), 'PUSHED');
         });
     }
 

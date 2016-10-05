@@ -64,17 +64,9 @@ export default class Helpers {
         }
     }
 
-
-
     static isArray(data:Array<any>) {
         if((data instanceof Array) === false) {
             Helpers.invalidParameterError('This should be an array', data);
-        }
-    }
-
-    static isRegexRule(data:RegExp) {
-        if ((data instanceof RegExp) === false) {
-            Helpers.invalidParameterError('This should be a Regexp', data);
         }
     }
 
@@ -110,17 +102,41 @@ export default class Helpers {
         return false;
     }
 
+
+    static isMaxAgeRegexRule(rule: any) {
+        Helpers.isConfigRegexRule(rule);
+        if( typeof rule.maxAge !== 'number') {
+            Helpers.invalidParameterError('This isnt a valid MaxAge RegexRule - one of the rule misses maxAge prop', rule);
+        }
+    }
+
+    static isConfigRegexRule(rule: any) {
+
+        if((rule.regex instanceof  RegExp) === false) {
+            Helpers.invalidParameterError('This isnt a valid RegexRule - the rule is not a regex', rule);
+        }
+        if( typeof rule.ignoreQuery !== 'boolean') {
+            Helpers.invalidParameterError('This isnt a valid RegexRule - the rule misses ignoreQuery prop', rule);
+        }
+
+    }
+
     static validateCacheConfig(cacheRules) {
         Helpers.isStringIn(cacheRules.default, ['always', 'never']);
         ['always', 'never', 'maxAge'].forEach((type) => {
-            Helpers.isArray(cacheRules[type]);
-
-            cacheRules[type].forEach(rule => {
-                Helpers.isRegexRule(rule.regex);
-                if (type === 'maxAge') {
-                    Helpers.hasMaxAge(rule);
+            for(var key in cacheRules[type]) {
+                if(typeof cacheRules[type][key].domain !== 'string' && (cacheRules[type][key].domain instanceof RegExp) === false ) {
+                    Helpers.invalidParameterError('Domain must be either a regex or a string', cacheRules[type][key].domain);
                 }
-            });
+                Helpers.isArray(cacheRules[type][key].rules);
+                cacheRules[type][key].rules.forEach(rule => {
+                    if (type === 'maxAge') {
+                        Helpers.isMaxAgeRegexRule(rule);
+                    } else {
+                        Helpers.isConfigRegexRule(rule);
+                    }
+                });
+            }
         });
     }
 

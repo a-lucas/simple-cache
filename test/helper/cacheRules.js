@@ -1,18 +1,26 @@
 module.exports = {
     maxAge: [
         {
-            regex: /maxAge.html$/,
-            maxAge: 1
+            domain: /.*/,
+            rules: [
+                {regex: /maxAge.html$/, maxAge: 1, ignoreQuery: false}
+            ]
         }
     ],
     always: [
         {
-            regex: /always.html$/
+            domain: /.*/,
+            rules: [
+                {regex: /always.html$/, ignoreQuery: false}
+            ]
         }
     ],
     never: [
         {
-            regex: /never.html$/
+            domain: /.*/,
+            rules: [
+                {regex: /never.html$/, ignoreQuery: false}
+            ]
         }
     ],
     default: 'never'

@@ -1,16 +1,24 @@
 
+
+
 export interface RegexRule {
-    regex: RegExp
+    regex: RegExp,
+    ignoreQuery?: boolean
 }
 
 export interface MaxAgeRegexRule extends RegexRule{
     maxAge: number
 }
 
+export interface DomainRule<T> {
+    domain: string | RegExp,
+    rules: T[]
+}
+
 export interface CacheRules{
-    maxAge: MaxAgeRegexRule[],
-    always: RegexRule[],
-    never: RegexRule[],
+    maxAge: DomainRule<MaxAgeRegexRule>[],
+    always: DomainRule<RegexRule>[],
+    never: DomainRule<RegexRule>[],
     default: string
 }
 

@@ -131,6 +131,7 @@ describe('CONFIG: clearing configs', function () {
 });
 
 
+
 describe('INITIALIZING CacheEngines and Instances', function () {
 
 
@@ -146,7 +147,7 @@ describe('INITIALIZING CacheEngines and Instances', function () {
             done();
         });
     });
-
+    
     it('should initialize instance2 & redis2 OK', function (done) {
         instance2 = new Instance(instanceName2, storageConfig, {
             on_existing_regex: 'replace',
@@ -183,6 +184,7 @@ describe('INITIALIZING CacheEngines and Instances', function () {
         });
     });
 
+
     it('should have instance1 and redis1 defined', function () {
         expect(instance1).to.be.defined;
         expect(redis1).to.be.defined;
@@ -202,11 +204,8 @@ describe('INITIALIZING CacheEngines and Instances', function () {
         expect(instance4).to.be.defined;
         expect(redis4).to.be.defined;
     });
-
 });
 
-
-//oneInstance(redis1, domain1);
 
 
 describe('REDIS storage with CALLBACKS', function () {

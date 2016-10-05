@@ -219,11 +219,6 @@ module.exports =
 	            Helpers.invalidParameterError('This should be an array', data);
 	        }
 	    };
-	    Helpers.isRegexRule = function (data) {
-	        if ((data instanceof RegExp) === false) {
-	            Helpers.invalidParameterError('This should be a Regexp', data);
-	        }
-	    };
 	    Helpers.hasMaxAge = function (data) {
 	        if (typeof data.maxAge !== 'number') {
 	            Helpers.invalidParameterError('This rule misses a maxAge property', data);
@@ -252,16 +247,37 @@ module.exports =
 	        }
 	        return false;
 	    };
+	    Helpers.isMaxAgeRegexRule = function (rule) {
+	        Helpers.isConfigRegexRule(rule);
+	        if (typeof rule.maxAge !== 'number') {
+	            Helpers.invalidParameterError('This isnt a valid MaxAge RegexRule - one of the rule misses maxAge prop', rule);
+	        }
+	    };
+	    Helpers.isConfigRegexRule = function (rule) {
+	        if ((rule.regex instanceof RegExp) === false) {
+	            Helpers.invalidParameterError('This isnt a valid RegexRule - the rule is not a regex', rule);
+	        }
+	        if (typeof rule.ignoreQuery !== 'boolean') {
+	            Helpers.invalidParameterError('This isnt a valid RegexRule - the rule misses ignoreQuery prop', rule);
+	        }
+	    };
 	    Helpers.validateCacheConfig = function (cacheRules) {
 	        Helpers.isStringIn(cacheRules.default, ['always', 'never']);
 	        ['always', 'never', 'maxAge'].forEach(function (type) {
-	            Helpers.isArray(cacheRules[type]);
-	            cacheRules[type].forEach(function (rule) {
-	                Helpers.isRegexRule(rule.regex);
-	                if (type === 'maxAge') {
-	                    Helpers.hasMaxAge(rule);
+	            for (var key in cacheRules[type]) {
+	                if (typeof cacheRules[type][key].domain !== 'string' && (cacheRules[type][key].domain instanceof RegExp) === false) {
+	                    Helpers.invalidParameterError('Domain must be either a regex or a string', cacheRules[type][key].domain);
 	                }
-	            });
+	                Helpers.isArray(cacheRules[type][key].rules);
+	                cacheRules[type][key].rules.forEach(function (rule) {
+	                    if (type === 'maxAge') {
+	                        Helpers.isMaxAgeRegexRule(rule);
+	                    }
+	                    else {
+	                        Helpers.isConfigRegexRule(rule);
+	                    }
+	                });
+	            }
 	        });
 	    };
 	    Helpers.JSONRegExpReplacer = function (key, value) {
@@ -362,26 +378,46 @@ module.exports =
 	    UrlCommon.prototype.getTTL = function () {
 	        return this._maxAge;
 	    };
+	    UrlCommon.prototype.checkDomain = function (stored) {
+	        if (typeof stored === 'string') {
+	            return this._domain.indexOf(stored) !== -1;
+	        }
+	        else {
+	            return stored.test(this._domain);
+	        }
+	    };
 	    UrlCommon.prototype.setCacheCategory = function () {
-	        var i;
+	        var key, domain, i;
 	        var config = this._storage.getCacheRules();
-	        for (i in config.maxAge) {
-	            if (this.getRegexTest(config.maxAge[i]) === true) {
-	                this._category = 'maxAge';
-	                this._maxAge = config.maxAge[i].maxAge;
-	                return;
+	        for (key = 0; key < config.maxAge.length; key++) {
+	            if (this.checkDomain(config.maxAge[key].domain)) {
+	                for (i = 0; i < config.maxAge[key].rules.length; i++) {
+	                    if (this.getRegexTest(config.maxAge[key].rules[i]) === true) {
+	                        this._category = 'maxAge';
+	                        this._maxAge = config.maxAge[key].rules[i].maxAge;
+	                        return;
+	                    }
+	                }
 	            }
 	        }
-	        for (i in config.always) {
-	            if (this.getRegexTest(config.always[i]) === true) {
-	                this._category = 'always';
-	                return;
+	        for (key = 0; key < config.always.length; key++) {
+	            if (this.checkDomain(config.always[key].domain)) {
+	                for (i = 0; i < config.always[key].rules.length; i++) {
+	                    if (this.getRegexTest(config.always[key].rules[i]) === true) {
+	                        this._category = 'always';
+	                        return;
+	                    }
+	                }
 	            }
 	        }
-	        for (i in config.never) {
-	            if (this.getRegexTest(config.never[i]) === true) {
-	                this._category = 'never';
-	                return;
+	        for (key = 0; key < config.never.length; key++) {
+	            if (this.checkDomain(config.never[key].domain)) {
+	                for (i = 0; i < config.never[key].rules.length; i++) {
+	                    if (this.getRegexTest(config.never[key].rules[i]) === true) {
+	                        this._category = 'never';
+	                        return;
+	                    }
+	                }
 	            }
 	        }
 	        this._category = config.default;
@@ -945,8 +981,8 @@ module.exports =
 	    RedisPool.connect = function (instanceName, config, cb) {
 	        if (typeof RedisPool._pool[instanceName] === 'undefined' ||
 	            RedisPool._pool[instanceName] === null ||
-	            RedisPool._status[instanceName] === 'undefined' ||
-	            !RedisPool._status[instanceName].online) {
+	            typeof RedisPool._sub[instanceName] === 'undefined' ||
+	            RedisPool._sub[instanceName] === null) {
 	            debug('This redis connection has never been instanciated before', instanceName);
 	            RedisPool._status[instanceName] = {
 	                online: false,
@@ -954,15 +990,34 @@ module.exports =
 	                warnings: []
 	            };
 	            RedisPool._pool[instanceName] = redis.createClient(config);
+	            RedisPool._sub[instanceName] = redis.createClient(config);
+	            var nb = 0;
+	            var nbErrors = 0;
 	            RedisPool._pool[instanceName].on('connect', function () {
 	                RedisPool._status[instanceName].online = true;
 	                debug('redis connected');
-	                cb(null);
+	                nb++;
+	                if (nb === 2) {
+	                    debug('POOL CONNECTED 2 conns');
+	                    cb(null);
+	                }
+	            });
+	            RedisPool._sub[instanceName].on('connect', function () {
+	                RedisPool._status[instanceName].online = true;
+	                debug('redis connected');
+	                nb++;
+	                if (nb === 2) {
+	                    debug('POOL CONNECTED 2 conns');
+	                    cb(null);
+	                }
 	            });
 	            RedisPool._pool[instanceName].on('error', function (e) {
 	                debug(e);
 	                RedisPool._status[instanceName].lastError = e;
-	                cb(e);
+	                nbErrors++;
+	                if (nbErrors === 1) {
+	                    cb(e);
+	                }
 	            });
 	            RedisPool._pool[instanceName].on('end', function () {
 	                RedisPool._pool[instanceName] = null;
@@ -975,17 +1030,34 @@ module.exports =
 	                RedisPool._status[instanceName].warnings.push(msg);
 	                debug('Warning called: ', instanceName, msg);
 	            });
+	            RedisPool._sub[instanceName].on('error', function (e) {
+	                debug(e);
+	                RedisPool._status[instanceName].lastError = e;
+	                nbErrors++;
+	                if (nbErrors === 1) {
+	                    cb(e);
+	                }
+	            });
+	            RedisPool._sub[instanceName].on('end', function () {
+	                RedisPool._sub[instanceName] = null;
+	                RedisPool._status[instanceName].online = false;
+	                console.warn('Redis Connection closed for instance ' + instanceName);
+	                debug('Connection closed', instanceName);
+	            });
+	            RedisPool._sub[instanceName].on('warning', function (msg) {
+	                console.warn('Redis warning for instance ' + instanceName + '. MSG = ', msg);
+	                RedisPool._status[instanceName].warnings.push(msg);
+	                debug('Warning called: ', instanceName, msg);
+	            });
 	        }
 	        else {
 	            cb();
 	        }
 	    };
-	    RedisPool.isOnline = function (instanceName) {
-	        return RedisPool._status[instanceName].online;
-	    };
 	    RedisPool.kill = function (instanceName) {
 	        if (RedisPool._status[instanceName].online === true) {
 	            RedisPool._pool[instanceName].end();
+	            RedisPool._sub[instanceName].end();
 	        }
 	    };
 	    RedisPool.getConnection = function (instanceName) {
@@ -994,7 +1066,14 @@ module.exports =
 	        }
 	        debug('Redis Pool isn\'t online yet');
 	    };
+	    RedisPool.getSubscriberConnection = function (instanceName) {
+	        if (RedisPool._status[instanceName].online) {
+	            return RedisPool._sub[instanceName];
+	        }
+	        debug('Redis Pool isn\'t online yet');
+	    };
 	    RedisPool._pool = {};
+	    RedisPool._sub = {};
 	    RedisPool._status = {};
 	    return RedisPool;
 	}());
@@ -1128,21 +1207,34 @@ module.exports =
 	                    _this.instanciated = true;
 	                    var parsedData = JSON.parse(data, helpers_1.default.JSONRegExpReviver);
 	                    _this.manager = new CacheRuleManager_1.default(parsedData, config.on_existing_regex);
+	                    _this.launchSubscriber();
 	                    cb(null);
 	                }
 	            });
 	        });
 	    }
+	    Instance.prototype.launchSubscriber = function () {
+	        var _this = this;
+	        var subscriber = pool_1.RedisPool.getSubscriberConnection(this.instanceName);
+	        subscriber.subscribe(this.getChannel());
+	        subscriber.on('message', function (channel, message) {
+	            if (message === 'PUSHED') {
+	                _this.onPublish();
+	            }
+	        });
+	    };
 	    Instance.prototype.getChannel = function () {
 	        return helpers_1.default.getConfigKey() + this.instanceName;
 	    };
 	    Instance.prototype.publish = function () {
+	        var _this = this;
 	        CacheEngine_1.default.updateAllUrlCategory(this.instanceName);
 	        var redisConn = pool_1.RedisPool.getConnection(this.instanceName);
 	        var stringified = JSON.stringify(this.manager.getRules(), helpers_1.default.JSONRegExpReplacer, 2);
 	        redisConn.hset(helpers_1.default.getConfigKey(), this.instanceName, stringified, function (err) {
 	            if (err)
 	                helpers_1.default.RedisError('while publishing config ' + stringified, err);
+	            redisConn.publish(_this.getChannel(), 'PUSHED');
 	        });
 	    };
 	    Instance.prototype.onPublish = function () {
@@ -1191,86 +1283,126 @@ module.exports =
 	        this.cacheRules = cacheRules;
 	        this.on_existing_regex = on_existing_regex;
 	    }
-	    CacheRuleManager.prototype.addMaxAgeRule = function (regex, maxAge) {
-	        helpers_1.default.isNotUndefined(regex, maxAge);
-	        helpers_1.default.isRegexRule(regex);
-	        helpers_1.default.hasMaxAge({ regex: maxAge });
-	        var found = this.findRegex(regex);
-	        this.add({ regex: regex, maxAge: maxAge }, 'maxAge', found);
+	    CacheRuleManager.prototype.addMaxAgeRule = function (domain, regex, maxAge, ignoreQuery) {
+	        helpers_1.default.isNotUndefined(domain, regex, maxAge);
+	        var regexRule = { regex: regex, maxAge: maxAge, ignoreQuery: ignoreQuery ? ignoreQuery : false };
+	        helpers_1.default.isMaxAgeRegexRule(regexRule);
+	        var found = this.findRegex(domain, regexRule);
+	        this.add(domain, regexRule, 'maxAge', found);
 	    };
-	    CacheRuleManager.prototype.addNeverRule = function (regex) {
+	    CacheRuleManager.prototype.addNeverRule = function (domain, regex, ignoreQuery) {
 	        helpers_1.default.isNotUndefined(regex);
-	        helpers_1.default.isRegexRule(regex);
-	        var found = this.findRegex(regex);
-	        this.add({ regex: regex }, 'never', found);
+	        var regexRule = { regex: regex, ignoreQuery: ignoreQuery ? ignoreQuery : false };
+	        helpers_1.default.isConfigRegexRule(regexRule);
+	        var found = this.findRegex(domain, regexRule);
+	        this.add(domain, regexRule, 'never', found);
 	    };
-	    CacheRuleManager.prototype.addAlwaysRule = function (regex) {
+	    CacheRuleManager.prototype.addAlwaysRule = function (domain, regex, ignoreQuery) {
 	        helpers_1.default.isNotUndefined(regex);
-	        helpers_1.default.isRegexRule(regex);
-	        var found = this.findRegex(regex);
-	        this.add({ regex: regex }, 'always', found);
+	        var regexRule = { regex: regex, ignoreQuery: ignoreQuery ? ignoreQuery : false };
+	        helpers_1.default.isConfigRegexRule(regexRule);
+	        var found = this.findRegex(domain, regexRule);
+	        this.add(domain, regexRule, 'always', found);
 	    };
 	    CacheRuleManager.prototype.getRules = function () {
 	        return this.cacheRules;
-	    };
-	    CacheRuleManager.prototype.mergeWith = function (rules) {
 	    };
 	    CacheRuleManager.prototype.setDefault = function (strategy) {
 	        helpers_1.default.isStringIn(strategy, ['always', 'never']);
 	        this.cacheRules.default = strategy;
 	    };
-	    CacheRuleManager.prototype.removeRule = function (regex) {
-	        helpers_1.default.isNotUndefined(regex);
-	        helpers_1.default.isRegexRule(regex);
-	        var found = this.findRegex(regex);
+	    CacheRuleManager.prototype.removeRule = function (domain, rule) {
+	        helpers_1.default.isNotUndefined(rule);
+	        helpers_1.default.isConfigRegexRule(rule);
+	        var found = this.findRegex(domain, rule);
 	        if (found !== null) {
-	            this.cacheRules[found.type].splice(found.index, 1);
+	            this.cacheRules[found.type][found.index].rules.splice(found.subIndex, 1);
+	            if (this.cacheRules[found.type][found.index].rules.length === 0) {
+	                this.cacheRules[found.type].splice(found.index, 1);
+	            }
 	        }
 	    };
 	    CacheRuleManager.prototype.removeAllMaxAgeRules = function () {
-	        this.cacheRules.maxAge = [];
+	        this.cacheRules.maxAge = {};
 	    };
 	    CacheRuleManager.prototype.removeAllNeverRules = function () {
-	        this.cacheRules.never = [];
+	        this.cacheRules.never = {};
 	    };
-	    CacheRuleManager.prototype.removeAllAlwaysRules = function () {
-	        this.cacheRules.always = [];
+	    CacheRuleManager.prototype.removeAllAlwaysRules = function (domain) {
+	        this.cacheRules.always = {};
 	    };
 	    CacheRuleManager.prototype.updateRules = function (cacheRules) {
 	        this.cacheRules = cacheRules;
 	    };
-	    CacheRuleManager.prototype.findRegex = function (regex) {
+	    CacheRuleManager.prototype.checkDomainMatch = function (stored, input) {
+	        if (typeof stored === 'string' && typeof input === 'string') {
+	            return stored === input;
+	        }
+	        else if (stored instanceof RegExp && input instanceof RegExp) {
+	            return helpers_1.default.SameRegex(stored, input);
+	        }
+	        else {
+	            return false;
+	        }
+	    };
+	    CacheRuleManager.prototype.findRegex = function (domain, rule) {
 	        var _this = this;
-	        var info = null, index, rule;
+	        var info = null, index, subIndex;
 	        ['always', 'never', 'maxAge'].forEach(function (type) {
 	            for (index = 0; index < _this.cacheRules[type].length; index++) {
-	                if (helpers_1.default.SameRegex(_this.cacheRules[type][index].regex, regex)) {
-	                    info = {
-	                        type: type,
-	                        index: index
-	                    };
-	                    break;
+	                if (_this.checkDomainMatch(_this.cacheRules[type][index].domain, domain)) {
+	                    for (subIndex = 0; subIndex < _this.cacheRules[type][index].rules.length; subIndex++) {
+	                        if (helpers_1.default.SameRegex(rule.regex, _this.cacheRules[type][index].rules[subIndex].regex)) {
+	                            info = {
+	                                type: type,
+	                                index: index,
+	                                subIndex: subIndex
+	                            };
+	                            break;
+	                        }
+	                    }
 	                }
 	            }
 	        });
 	        return info;
 	    };
-	    CacheRuleManager.prototype.add = function (rule, where, found) {
+	    CacheRuleManager.prototype.add = function (domain, rule, where, found) {
+	        debug('adding rule ', domain, rule, where, found);
+	        debug('before: ', this.cacheRules);
 	        if (found !== null) {
 	            switch (this.on_existing_regex) {
 	                case 'ignore':
-	                    break;
+	                    return;
 	                case 'replace':
-	                    this.cacheRules[found.type].splice(found.index, 1);
-	                    this.cacheRules[where].push(rule);
+	                    debug('replacing: ', this.cacheRules[found.type][found.index].rules, found.subIndex);
+	                    this.cacheRules[found.type][found.index].rules.splice(found.subIndex, 1);
 	                    break;
 	                case 'error':
 	                    throw new Error('Adding a maxAge regex that is already defined here: ' + JSON.parse(found));
 	            }
 	        }
-	        else {
-	            this.cacheRules[where].push(rule);
+	        if (found !== null && found.type === where) {
+	            this.cacheRules[where][found.index].rules.push(rule);
 	        }
+	        else {
+	            var index2update = void 0, index = void 0;
+	            for (index = 0; index < this.cacheRules[where].length; index++) {
+	                if (this.checkDomainMatch(this.cacheRules[where][index].domain, domain)) {
+	                    index2update = index;
+	                }
+	            }
+	            if (typeof index2update === 'number') {
+	                debug('A domain already exists, so pusing rules at index ', index2update, this.cacheRules[where][index2update]);
+	                this.cacheRules[where][index2update].rules.push(rule);
+	            }
+	            else {
+	                this.cacheRules[where].push({
+	                    domain: domain,
+	                    rules: [rule]
+	                });
+	            }
+	        }
+	        return;
 	    };
 	    return CacheRuleManager;
 	}());

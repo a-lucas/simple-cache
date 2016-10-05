@@ -26,7 +26,8 @@ var cacheRules = {
     maxAge: [],
     always: [
         {
-            regex: /.*/
+            domain: /.*/,
+            rules: [{ regex: /.*/, ignoreQuery: false}]
         }
     ],
     never: [],
