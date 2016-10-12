@@ -21,20 +21,22 @@ export default class Instance {
         this.config = (<any>Object).assign({on_existing_regex: 'replace', on_publish_update: false  }, config);
 
          RedisPool.connect(instanceName, redisConfig, (err) => {
-            if(err) cb('Error connecting to REDIS: ' + err);
+            if(err) return cb('Error connecting to REDIS: ' + err);
 
             const redisConn = RedisPool.getConnection(instanceName);
             //from cache rule engine
             redisConn.hget(Helpers.getConfigKey(), this.instanceName, (err, data) => {
-                if (err) cb('Redis error - retrieving ' + Helpers.getConfigKey() + ' -> ' + err);
+                if (err) return cb('Redis error - retrieving ' + Helpers.getConfigKey() + ' -> ' + err);
                 if (data === null) {
-                    cb('No CacheRule defined for this instance ' + this.instanceName);
+                    return cb('No CacheRule defined for this instance ' + this.instanceName);
                 } else {
                     this.instanciated = true;
                     const parsedData = JSON.parse(data, Helpers.JSONRegExpReviver);
                     this.manager = new CacheRuleManager(parsedData, config.on_existing_regex);
                     this.launchSubscriber();
+
                     cb(null);
+
                 }
             });
         });
@@ -101,4 +103,8 @@ export default class Instance {
         return this.instanciated;
     }
 
+    destroy(): void {
+        RedisPool.kill(this.instanceName);
+        this.instanciated = false;
+    }
 }

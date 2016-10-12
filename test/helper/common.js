@@ -228,8 +228,7 @@ function DELETE_ALL(cacheEngine) {
 function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
 
     describe('Creating a new Config for '+ instanceName, function () {
-
-        var creator;
+        
 
         it('We delete redis Exiting Cache Config', function (done) {
             const client = redis.createClient(storageConfig);
@@ -240,17 +239,8 @@ function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
             });
         });
 
-        it('should create the CacheRuleCreator ok', function (done) {
-
-            creator = new CacheRulesCreator(instanceName, storageConfig, function (err) {
-                if (err) return done(err);
-                done();
-            });
-        });
-
         it('should create the new cache rule ok', function (done) {
-
-            creator.importRules(cacheRules, err => {
+            CacheRulesCreator.createCache(instanceName, false, storageConfig, cacheRules, function (err) {
                 if (err) return done(err);
                 done();
             });
@@ -258,7 +248,7 @@ function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
 
         it('should complain about the fact that a Cache Config already exists', function () {
 
-            creator.importRules(cacheRules, err => {
+            CacheRulesCreator.createCache(instanceName, false, storageConfig, cacheRules, function (err) {
                 if (err) return done();
                 if (!err) done('Should be refused');
             });
@@ -349,7 +339,7 @@ function DELETE_DOMAIN_NOT_SET(domain, instanceName, type) {
     });
 }
 
-function URL_HAS_CONTENT(url, html) {
+function URL_HAS_CONTENT(url, content, extra) {
     var urlContent;
     it('The URL get Should resolve(true) ' + url.getUrl(), function(done) {
 
@@ -361,8 +351,11 @@ function URL_HAS_CONTENT(url, html) {
         });
     });
 
-    it('The content should be expected', function() {
-        expect(urlContent).eql(html);
+    it(' content should be correct', function() {
+        expect(urlContent.content).eql(content);
+    });
+    it('Extra should be correct', function() {
+        expect(urlContent.extra).eql(extra);
     });
 }
 
@@ -376,23 +369,22 @@ function URL_GET_REJECTED(url) {
     });
 }
 
-
 function URL_CATEGORY_IS(url, name) {
     it('The url category should be ' + name, function() {
         expect(url.getCategory()).eql(name);
     })
 }
 
-function SET_FORCE(url, html) {
+function SET_FORCE(url, content, extra) {
     it('The url is forcefully cached' + url.getUrl(), function(done) {
-        url.set(html, true).then(function(res) {
+        url.set(content, extra, true).then(function(res) {
             done();
         }, function(err) {
             done('err = ' + err);
         });
     });
     HAS_URL(url);
-    URL_HAS_CONTENT(url, html);
+    URL_HAS_CONTENT(url, content, extra);
 }
 
 function URL_NAME_IS(url, name) {

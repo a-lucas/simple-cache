@@ -81,13 +81,13 @@ module.exports = function (type, data) {
 
         URL_DETAILS(maxAge.obj, maxAge.str, 'maxAge');
 
-        SET_URL(maxAge.obj, html);
+        SET_URL(maxAge.obj, html, { key: 'value' });
 
-        SET_URL_FALSE(maxAge.obj, html);
+        SET_URL_FALSE(maxAge.obj, html, { key: 'value' });
 
         WAIT_HAS_NOT_URL(maxAge.obj, 1100);
 
-        SET_URL(maxAge.obj, html);
+        SET_URL(maxAge.obj, html, { key: 'value' });
 
         DELETE_URL(maxAge.obj);
 
@@ -99,9 +99,9 @@ module.exports = function (type, data) {
 
         URL_DETAILS(never.obj, never.str, 'never');
 
-        SET_URL_FALSE(never.obj, html);
+        SET_URL_FALSE(never.obj, html, { key: 'value' });
 
-        SET_FORCE(never.obj, html);
+        SET_FORCE(never.obj, html, { key: 'value' });
 
         DELETE_URL(never.obj);
 
@@ -111,9 +111,9 @@ module.exports = function (type, data) {
     describe('unMatchedURL', function () {
         URL_DETAILS(unmatched.obj, unmatched.str, 'never');
 
-        SET_URL_FALSE(unmatched.obj, html);
+        SET_URL_FALSE(unmatched.obj, html, { key: 'value' });
 
-        SET_FORCE(unmatched.obj, html);
+        SET_FORCE(unmatched.obj, html, { key: 'value' });
 
         DELETE_URL(unmatched.obj);
     });
@@ -123,9 +123,9 @@ module.exports = function (type, data) {
 
         URL_DETAILS(always.obj, always.str, 'always');
 
-        SET_URL(always.obj, html);
+        SET_URL(always.obj, html, { key: 'value' });
 
-        SET_URL_FALSE(always.obj, html);
+        SET_URL_FALSE(always.obj, html, { key: 'value' });
 
         DELETE_URL(always.obj);
 
@@ -135,7 +135,7 @@ module.exports = function (type, data) {
     describe('clearInstance()', function () {
 
         clearInstance.forEach(function (url) {
-            SET_URL(url, html);
+            SET_URL(url, html, { key: 'value' });
         });
         DELETE_ALL(cacheEngine);
     });
@@ -151,9 +151,9 @@ module.exports = function (type, data) {
             });
         });
 
-        SET_URL(multipleDomains[0], html);
-        SET_URL(multipleDomains[1], html);
-        SET_URL(multipleDomains[2], html);
+        SET_URL(multipleDomains[0], html, { key: 'value' });
+        SET_URL(multipleDomains[1], html, { key: 'value' });
+        SET_URL(multipleDomains[2], html, { key: 'value' });
 
         URL_DETAILS(multipleDomains[0], '/always.html', 'always', 'http://a.com');
         URL_DETAILS(multipleDomains[1], '/always.html', 'always', 'http://b.com');
@@ -186,9 +186,9 @@ module.exports = function (type, data) {
         GET_URLS('http://a.com', cacheEngine, []);
 
 
-        SET_URL(getStoredURLs[0], html);
-        SET_URL(getStoredURLs[1], html);
-        SET_URL(getStoredURLs[2], html);
+        SET_URL(getStoredURLs[0], html, { key: 'value' });
+        SET_URL(getStoredURLs[1], html, { key: 'value' });
+        SET_URL(getStoredURLs[2], html, { key: 'value' });
 
         GET_URLS(domain, cacheEngine, ['/0always.html']);
         GET_URLS('http://a.com', cacheEngine, ['/1always.html', '/maxAge.html']);

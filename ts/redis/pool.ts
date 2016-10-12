@@ -6,6 +6,10 @@ const debug = dbug('simple-url-cache-REDIS');
 
 export class RedisPool {
 
+    /*
+    TODO: implement a status uninitialized, connecting, connected, ended
+    So when one of pool or subs fails, and it is on connecting sttaus, then on connection success, kill it
+     */
     static _pool = {};
 
     static _sub = {};
@@ -23,7 +27,10 @@ export class RedisPool {
         ) {
             debug('This redis connection has never been instanciated before', instanceName);
             RedisPool._status[instanceName] = {
-                online: false,
+                online: {
+                    pool: false,
+                    sub: false
+                },
                 lastError: null,
                 warnings: []
             };
@@ -35,8 +42,8 @@ export class RedisPool {
             var nbErrors = 0;
 
             RedisPool._pool[instanceName].on('connect', () => {
-                RedisPool._status[instanceName].online = true;
-                debug('redis connected');
+                RedisPool._status[instanceName].online.pool = true;
+                debug('pool redis connected');
                 nb++;
                 if(nb === 2) {
                     debug('POOL CONNECTED 2 conns');
@@ -45,7 +52,7 @@ export class RedisPool {
             });
 
             RedisPool._sub[instanceName].on('connect', () => {
-                RedisPool._status[instanceName].online = true;
+                RedisPool._status[instanceName].online.sub = true;
                 debug('redis connected');
                 nb++;
                 if(nb === 2) {
@@ -56,10 +63,10 @@ export class RedisPool {
 
 
             RedisPool._pool[instanceName].on('error', (e) => {
-                debug(e);
                 RedisPool._status[instanceName].lastError = e;
                 //RedisPool._pool[instanceName] = null;
                 nbErrors++;
+                debug(nbErrors, e);
                 if(nbErrors === 1) {
                     cb(e);
                 }
@@ -68,7 +75,8 @@ export class RedisPool {
 
             RedisPool._pool[instanceName].on('end', () => {
                 RedisPool._pool[instanceName] = null;
-                RedisPool._status[instanceName].online = false;
+                RedisPool._status[instanceName].online.pool = false;
+                RedisPool.kill(instanceName);
                 console.warn('Redis Connection closed for instance ' + instanceName);
                 debug('Connection closed', instanceName);
             });
@@ -81,10 +89,9 @@ export class RedisPool {
 
 
             RedisPool._sub[instanceName].on('error', (e) => {
-                debug(e);
                 RedisPool._status[instanceName].lastError = e;
-                //RedisPool._pool[instanceName] = null;
                 nbErrors++;
+                debug(nbErrors, e);
                 if(nbErrors === 1) {
                     cb(e);
                 }
@@ -92,7 +99,8 @@ export class RedisPool {
 
             RedisPool._sub[instanceName].on('end', () => {
                 RedisPool._sub[instanceName] = null;
-                RedisPool._status[instanceName].online = false;
+                RedisPool._status[instanceName].online.sub = false;
+                RedisPool.kill(instanceName);
                 console.warn('Redis Connection closed for instance ' + instanceName);
                 debug('Connection closed', instanceName);
             });
@@ -103,14 +111,16 @@ export class RedisPool {
                 debug('Warning called: ', instanceName, msg);
             });
         } else {
-            cb();
+            cb(null);
         }
     }
 
     static kill(instanceName){
-        if (RedisPool._status[instanceName].online === true) {
-            RedisPool._pool[instanceName].end();
+        if (RedisPool._status[instanceName].online.sub === true) {
             RedisPool._sub[instanceName].end();
+        }
+        if (RedisPool._status[instanceName].online.pool === true) {
+            RedisPool._pool[instanceName].end();
         }
     }
 

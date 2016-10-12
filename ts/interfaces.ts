@@ -32,21 +32,32 @@ export interface RedisStorageConfig{
     db?: string;
 }
 
+
+export interface GetResults {
+    content: string,
+    createdOn: number,
+    extra: any
+}
+
 export interface parsedURL {
     domain: string,
     relativeURL: string
 }
 
+export interface CallBackGetResultsParam {
+    (err: string | Error, res?: GetResults): any
+}
+
 export interface CallBackBooleanParam {
-    (err: string, res: boolean): any
+    (err: string | Error, res?: boolean): any
 }
 
 export interface CallBackStringParam {
-    (err: string, res: string): any
+    (err: string | Error, res?: string): any
 }
 
 export interface CallBackStringArrayParam {
-    (err: string, res: string[]): any
+    (err: string | Error, res?: string[]): any
 }
 
 export interface InstanceConfig {

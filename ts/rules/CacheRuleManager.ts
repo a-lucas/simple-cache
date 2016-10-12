@@ -52,15 +52,15 @@ export default class CacheRuleManager {
     }
 
     removeAllMaxAgeRules(): void {
-        this.cacheRules.maxAge = {};
+        this.cacheRules.maxAge = [];
     }
 
     removeAllNeverRules(): void {
-        this.cacheRules.never = {};
+        this.cacheRules.never = [];
     }
 
     removeAllAlwaysRules(domain?:string): void {
-        this.cacheRules.always = {};
+        this.cacheRules.always = [];
     }
 
     //internal method made public for access out of scope (CacheRuleEngine)

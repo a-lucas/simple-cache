@@ -26,7 +26,7 @@ module.exports = {
     resolve: {
         extensions: ['', '.webpack.js', '.web.js', '.ts', '.js']
     },
-    devtool: 'source-map',
+    devtool: 'inline-source-map',
     plugins: [
         //new webpack.optimize.UglifyJsPlugin({ minimize: true })
     ],

@@ -1,6 +1,6 @@
 "use strict";
 var redis = require('redis');
-var CacheRulesCreator = require('./../../dist/redis-cache').CacheRulesCreator;
+var CacheRulesCreator = require('./../../dist/redis-cache').RedisUrlCache.CacheRulesCreator;
 
 var leche = require('leche');
 
@@ -26,7 +26,7 @@ function WAIT_HAS_NOT_URL (url, time) {
 }
 
 
-function SET_URL(url, html) {
+function SET_URL(url, content, extra) {
 
     describe('Setting a URL ' + url.getDomain() + url.getUrl() , function() {
         var setted;
@@ -34,7 +34,7 @@ function SET_URL(url, html) {
         HAS_NOT_URL(url);
 
         it('cache the url without errors', function(done){
-            url.set(html, false, function(err, res) {
+            url.set(content, extra, false, function(err, res) {
                 if(err) return done(err);
                 setted = res;
                 done();
@@ -46,7 +46,7 @@ function SET_URL(url, html) {
         });
 
         HAS_URL(url);
-        URL_HAS_CONTENT(url, html);
+        URL_HAS_CONTENT(url, content, extra);
     });
 
 }
@@ -68,11 +68,11 @@ function DELETE_URL(url) {
 
 }
 
-function SET_URL_FALSE(url, html) {
+function SET_URL_FALSE(url, content, extra) {
     describe('Calling set() should resolve to (false) - already cached on ' + url.getUrl(), function() {
         var setted;
         it('cache the url  without errors', function(done){
-            url.set(html, false, function(err, res) {
+            url.set(content, extra, false, function(err, res) {
                 if(err) return done(err);
                 setted = res;
                 done();
@@ -192,13 +192,13 @@ function DELETE_ALL(cacheEngine) {
 
 }
 
-function SET_FORCE(url, html) {
+function SET_FORCE(url, content, extra) {
 
     describe('Forcing the URL cache ', function() {
 
         it('The url is forcefully cached', function(done) {
 
-            url.set(html, true, function(err, res) {
+            url.set(content, extra, true, function(err, res) {
                 if(err) return done(err);
                 done();
 
@@ -206,7 +206,7 @@ function SET_FORCE(url, html) {
         });
 
         HAS_URL(url );
-        URL_HAS_CONTENT(url,  html);
+        URL_HAS_CONTENT(url,  content, extra);
     })
 
 }
@@ -241,8 +241,6 @@ function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
 
     describe('Creating a new Config for '+ instanceName, function () {
 
-        var creator;
-
         it('We delete redis Exiting Cache Config', function (done) {
             const client = redis.createClient(storageConfig);
 
@@ -252,17 +250,8 @@ function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
             });
         });
 
-        it('should create the CacheRuleCreator ok', function (done) {
-
-            creator = new CacheRulesCreator(instanceName, storageConfig, function (err) {
-                if (err) return done(err);
-                done();
-            });
-        });
-
         it('should create the new cache rule ok', function (done) {
-
-            creator.importRules(cacheRules, err => {
+            CacheRulesCreator.createCache(instanceName, false, storageConfig, cacheRules, function (err) {
                 if (err) return done(err);
                 done();
             });
@@ -270,7 +259,7 @@ function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
 
         it('should complain about the fact that a Cache Config already exists', function () {
 
-            creator.importRules(cacheRules, err => {
+            CacheRulesCreator.createCache(instanceName, false, storageConfig, cacheRules, function (err) {
                 if (err) return done();
                 if (!err) done('Should be refused');
             });
@@ -329,7 +318,7 @@ function HAS_NOT_URL (url) {
 
 ///
 
-function URL_HAS_CONTENT(url, html) {
+function URL_HAS_CONTENT(url, content, extra) {
     var urlContent;
     it('The URL get Should resolve(true) ', function(done) {
         url.get(function(err, res) {
@@ -339,8 +328,12 @@ function URL_HAS_CONTENT(url, html) {
         });
     });
 
-    it('The content should be expected', function() {
-        expect(urlContent).eql(html);
+    it('content should be expected', function() {
+        expect(urlContent.content).eql(content);
+    });
+
+    it('content should be expected', function() {
+        expect(urlContent.extra).eql(extra);
     });
 }
 

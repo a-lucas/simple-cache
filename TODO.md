@@ -1,3 +1,24 @@
+### Bugs
+
+#### ignoreQuery
+Some conflicts may arise with the ignoreQuery
+
+for example : 
+
+
+/aaa?key1=value matches /aaa/ with ignoreQuery and will store the key /aaa?key1=value
+/aaa?key2=value matches /aaa/ with ignoreQuery and will store the key /aaa?key2=value
+
+In scenario where cache is canceled with 
+/aaa?timestamp=12345 , the url will be cached many times blowing up storage
+
+
+#### publish
+
+Must go trough all existing cached URL and clear the urls that shouldnt be cached anymore otherwise, get() & has() will return the wrong result
+
+
+
 #### testing
 
 - Test validation errors

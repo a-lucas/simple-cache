@@ -2,10 +2,10 @@
 var chai = require('chai');
 var expect = chai.expect;
 
-var CacheRulesCreator = require('./../dist/redis-cache').CacheRulesCreator;
-var CacheEnginePromise = require('./../dist/redis-cache').CacheEnginePromise;
-var CacheEngineCB = require('./../dist/redis-cache').CacheEngineCB;
-var Instance = require('./../dist/redis-cache').Instance;
+var CacheRulesCreator = require('./../dist/redis-cache').RedisUrlCache.CacheRulesCreator;
+var CacheEnginePromise = require('./../dist/redis-cache').RedisUrlCache.CacheEnginePromise;
+var CacheEngineCB = require('./../dist/redis-cache').RedisUrlCache.CacheEngineCB;
+var Instance = require('./../dist/redis-cache').RedisUrlCache.Instance;
 
 
 var storageConfig = {
@@ -82,7 +82,7 @@ describe('It should fail on wrong parameters', function() {
                 instance2;
             it('creates a valid instance', function(done) {
                 instance1 = new Instance('INSTANCE', storageConfig, {}, (err) => {
-                    if(err) done(err);
+                    if(err) return done(err);
                     done();
                 });
             });
@@ -146,7 +146,7 @@ describe('It should fail on wrong parameters', function() {
                 instance2;
             it('creates a valid instance', function(done) {
                 instance1 = new Instance('INSTANCE', storageConfig, {}, (err) => {
-                    if(err) done(err);
+                    if(err) return done(err);
                     done();
                 });
             });
@@ -212,7 +212,7 @@ describe('It should fail on wrong parameters', function() {
             manager;
         it('creates a valid instance', function(done) {
             instance = new Instance('INSTANCE', storageConfig, {on_existing_regex: 'error'}, (err) => {
-                if(err) done(err);
+                if(err) return done(err);
                 done();
             });
         });

@@ -1,4 +1,4 @@
-import {CacheRules} from "./../interfaces";
+import {CacheRules, CallBackGetResultsParam, CallBackBooleanParam, CallBackStringArrayParam, CallBackStringParam} from "./../interfaces";
 import {RedisPool} from './pool';
 import * as redis from 'redis';
 import * as debg from 'debug';
@@ -82,7 +82,7 @@ export default class RedisStorageCB extends StorageCB {
 
     }
 
-    getCachedDomains(cb:Function):void {
+    getCachedDomains(cb:CallBackStringArrayParam):void {
         //debug('getAllCachedDomains called');
         this._conn.hkeys(this.hashKey, (err, results) => {
             if (err) return cb(err);
@@ -91,7 +91,7 @@ export default class RedisStorageCB extends StorageCB {
         });
     }
 
-    getCachedURLs(domain:string, cb:Function): void {
+    getCachedURLs(domain:string, cb:CallBackStringArrayParam): void {
         var cachedUrls = [];
 
         this._conn.hkeys(this.getDomainHashKey(domain), (err, urls) => {
@@ -102,8 +102,8 @@ export default class RedisStorageCB extends StorageCB {
 
             //debug('found these urls in ', this.getDomainHashKey(domain), urls);
             let nb = 0;
+            
             urls.forEach(url => {
-
                 this._conn.get(this.getUrlKey(domain, url), (err, data) => {
                     if (err) return cb(err);
                     //debug('for url, got content ', url, data);
@@ -138,7 +138,7 @@ export default class RedisStorageCB extends StorageCB {
      * HMDEL domain:instance key
      *
      */
-    delete(domain:string, url:string, category, ttl,  cb):void {
+    delete(domain:string, url:string, category, ttl,  cb: CallBackBooleanParam):void {
         //debug('removing url cache: ', domain, url);
         this.has(domain, url, category, ttl, (err, isCached) => {
             if (!isCached) {
@@ -178,24 +178,25 @@ export default class RedisStorageCB extends StorageCB {
      *      -> if not set, not cached
      *          HMDEL domain:instance key
      */
-    get(domain: string, url: string, category, ttl, cb:Function):void {
+    get(domain: string, url: string, category, ttl, cb:CallBackGetResultsParam):void {
         //debug('Retrieving url cache: ', domain, url);
-        this._conn.hget(this.getDomainHashKey(domain), url, (err, content) => {
+        this._conn.hget(this.getDomainHashKey(domain), url, (err, content: string) => {
             if (err) return cb(err);
             if (content === null) {
                 return cb('url not cached');
             }
 
-            this._conn.get(this.getUrlKey(domain, url), (err, timestamp) => {
+            this._conn.get(this.getUrlKey(domain, url), (err, data: string) => {
                 if (err) return cb(err);
-                if (timestamp === null) {
+                if (data === null) {
                     //todo->delete
                     this._conn.hdel(this.getDomainHashKey(domain), this.getUrlKey(domain, url), (err) => {
                         if (err) return cb(err);
                         return cb('url not cached - cleaning timestamp informations');
                     });
                 } else {
-                    return cb(null, content);
+                    const deserializedContent = JSON.parse(data);
+                    return cb(null, { content: content, createdOn: deserializedContent.timestamp, extra: deserializedContent.extra });
                 }
             });
         });
@@ -241,11 +242,9 @@ export default class RedisStorageCB extends StorageCB {
      *          HEXPIRE domain:instance:key ttl
      *
      */
-    set(domain, url, value, category, ttl, force, cb:Function):void {
+    set(domain, url, value, extra: Object, category, ttl, force, cb:CallBackBooleanParam):void {
         if (force === true) {
-            let ttl = 0;
-
-            this.store(domain, url, value, ttl, force, (err, result) => {
+            this.store(domain, url, value, extra, ttl, (err, result) => {
                 if (err) return cb(err);
                 return cb(null, result);
             });
@@ -261,8 +260,7 @@ export default class RedisStorageCB extends StorageCB {
                     //debug('This url is already cached - not storing it: ', domain, url);
                     return cb(null, false);
                 } else {
-
-                    this.store(domain, url, value, ttl, force, (err, result) => {
+                    this.store(domain, url, value, extra, ttl, (err, result) => {
                         if(err) return cb(err);
                         return cb(null, result);
                     });
@@ -275,7 +273,7 @@ export default class RedisStorageCB extends StorageCB {
         return this.hashKey + ':' + domain;
     }
 
-    private store(domain:string, url:string, value:string, ttl:number, force:boolean, cb:Function) {
+    private store(domain:string, url:string, value:string, extra: Object,  ttl:number, cb:CallBackBooleanParam) {
 
         this._conn.hset(this.hashKey, domain, domain, (err) => {
             if (err) {
@@ -285,37 +283,16 @@ export default class RedisStorageCB extends StorageCB {
                     if (err) {
                         return cb(err);
                     }
-                    if (exists === 0) {
-                        //debug('Already set ');
-                        return cb(null, true);
 
-                    }
-                    this._conn.get(this.getUrlKey(domain, url), (err, result) => {
-                        if (err) {
-                            return cb(err);
-                        }
-                        if (result === null) {
-                            //debug('REDIS timestamp not set');
-                            this._conn.set(this.getUrlKey(domain, url), Date.now(), (err) => {
+                    this._conn.set(this.getUrlKey(domain, url), JSON.stringify({timestamp:Date.now(), extra: extra}), (err) => {
+                        if (err) return cb(err);
+                        if (ttl > 0) {
+                            this._conn.expire(this.getUrlKey(domain, url), ttl, (err) => {
                                 if (err) return cb(err);
-                                if (ttl > 0) {
-                                    this._conn.expire(this.getUrlKey(domain, url), ttl, (err) => {
-                                        if (err) return cb(err);
-                                        return cb(null, true);
-                                    });
-                                } else {
-                                    return cb(null, true);
-                                }
-                            });
-                        } else if (force === true) {
-                            if (ttl > 0) {
-                                this._conn.expire(this.getUrlKey(domain, url), ttl, (err) => {
-                                    if (err) return cb(err);
-                                    return cb(null, true);
-                                });
-                            } else {
                                 return cb(null, true);
-                            }
+                            });
+                        } else {
+                            return cb(null, true);
                         }
                     });
                 });

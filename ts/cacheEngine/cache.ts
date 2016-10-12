@@ -1,4 +1,4 @@
-import { RegexRule, CallBackBooleanParam, CallBackStringParam} from '../interfaces';
+import {RegexRule, CallBackBooleanParam, CallBackStringParam, GetResults, CallBackGetResultsParam} from '../interfaces';
 import Helpers from  '../helpers';
 import {Promise} from 'es6-promise';
 import RedisStoragePromise from "../redis/instancePromise";
@@ -55,13 +55,14 @@ export class UrlCommon {
         }else {
             return stored.test(this._domain);
         }
-
     }
     public setCacheCategory(): void  {
         let key,
             domain,
             i;
         const config = this._storage.getCacheRules();
+
+        debug('config loaded: ', config);
 
         for (key=0; key < config.maxAge.length; key++) {
             if (this.checkDomain(config.maxAge[key].domain)) {
@@ -114,7 +115,7 @@ export class UrlPromise extends UrlCommon {
 
     };
 
-    get = (): Promise<string> => {
+    get = (): Promise<GetResults> => {
         return this._storagePromise.get(this.getDomain(), this.getUrl(), this.getCategory(), this.getTTL());
     };
 
@@ -122,14 +123,14 @@ export class UrlPromise extends UrlCommon {
         return this._storagePromise.has(this.getDomain(), this.getUrl(), this.getCategory(), this.getTTL());
     };
 
-    set = (html : string, force?: boolean): Promise<boolean> => {
-        Helpers.isStringDefined(html);
+    set = (content : string, extra: Object, force?: boolean): Promise<boolean> => {
+        Helpers.isStringDefined(content);
         Helpers.isOptionalBoolean(force);
         
         if(typeof force === 'undefined') {
             force = false;
         }
-        return this._storagePromise.set(this.getDomain(), this.getUrl(), html, this.getCategory(), this.getTTL(), force);
+        return this._storagePromise.set(this.getDomain(), this.getUrl(), content, extra, this.getCategory(), this.getTTL(), force);
     };
 }
 
@@ -139,7 +140,7 @@ export class UrlCB extends UrlCommon{
         this._storageCB.delete(this.getDomain(), this.getUrl(), this.getCategory(), this.getTTL(), cb);
     };
 
-    get = (cb: CallBackStringParam): void => {
+    get = (cb: CallBackGetResultsParam): void => {
         this._storageCB.get(this.getDomain(), this.getUrl(), this.getCategory(), this.getTTL(), cb);
     };
 
@@ -147,10 +148,10 @@ export class UrlCB extends UrlCommon{
         this._storageCB.has(this.getDomain(), this.getUrl(), this.getCategory(), this.getTTL(), cb);
     };
 
-    set = (html : string, force: boolean, cb: CallBackBooleanParam): void => {
-        Helpers.isStringDefined(html);
+    set = (content : string, extra: Object, force: boolean, cb: CallBackBooleanParam): void => {
+        Helpers.isStringDefined(content);
         Helpers.isBoolean(force);
-        this._storageCB.set(this.getDomain(), this.getUrl(), html, this.getCategory(), this.getTTL(), force, cb);
+        this._storageCB.set(this.getDomain(), this.getUrl(), content, extra, this.getCategory(), this.getTTL(), force, cb);
     };
 }
 

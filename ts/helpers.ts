@@ -1,6 +1,7 @@
 import {RedisStorageConfig, parsedURL} from './interfaces';
 import * as nodeurl from 'url';
-import CacheEngine from "./cacheEngine/CacheEngine";
+
+const debug = require('debug')('simple-url-cache');
 
 export default class Helpers {
 
@@ -44,6 +45,8 @@ export default class Helpers {
         parsedURL.search = null;
 
         let domain = nodeurl.format(parsedURL);
+
+        debug('parseURL result: ', domain, relativeURL)
         if (domain === relativeURL) {
             Helpers.invalidParameterError('invalid URL ',url);
         }
@@ -59,7 +62,7 @@ export default class Helpers {
         }
         for(var i in input) {
             if (typeof input === 'undefined') {
-                Helpers.invalidParameterError('Undefined paraneter provided at index ',i);
+                Helpers.invalidParameterError('Undefined parameter provided at index ',i);
             }
         }
     }
@@ -123,7 +126,10 @@ export default class Helpers {
 
     static validateCacheConfig(cacheRules) {
         Helpers.isStringIn(cacheRules.default, ['always', 'never']);
+        Helpers.isNotUndefined(cacheRules.maxAge, cacheRules.always, cacheRules.never);
+
         ['always', 'never', 'maxAge'].forEach((type) => {
+            Helpers.isArray(cacheRules[type]);
             for(var key in cacheRules[type]) {
                 if(typeof cacheRules[type][key].domain !== 'string' && (cacheRules[type][key].domain instanceof RegExp) === false ) {
                     Helpers.invalidParameterError('Domain must be either a regex or a string', cacheRules[type][key].domain);

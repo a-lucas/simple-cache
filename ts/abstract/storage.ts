@@ -1,6 +1,6 @@
 import {Promise} from 'es6-promise';
 
-import {CallBackBooleanParam, method, CacheRules, CallBackStringParam, CallBackStringArrayParam} from "../interfaces";
+import {CallBackBooleanParam, CallBackGetResultsParam, GetResults, method, CacheRules, CallBackStringParam, CallBackStringArrayParam} from "../interfaces";
 
 abstract class Storage {
     protected method: method;
@@ -13,12 +13,13 @@ abstract class Storage {
 
 }
 
+
 export abstract class StoragePromise extends Storage{
 
     abstract delete(domain: string, url: string, category: string, ttl: number): Promise<boolean>;
-    abstract get(domain: string, url: string, category: string, ttl: number): Promise<string>;
+    abstract get(domain: string, url: string, category: string, ttl: number): Promise<GetResults>;
     abstract has(domain: string, url: string, category: string, ttl: number): Promise<boolean>;
-    abstract set(domain: string, url: string, value: string, category: string,  ttl: number, force: boolean): Promise<boolean>;
+    abstract set(domain: string, url: string, value: string, extra: string, category: string,  ttl: number, force: boolean): Promise<boolean>;
 
     abstract clearCache(): Promise<boolean>;
     abstract clearDomain(domain: string): Promise<boolean>;
@@ -29,9 +30,9 @@ export abstract class StoragePromise extends Storage{
 export abstract class StorageCB extends Storage{
 
     abstract delete(domain: string, url: string, category: string, ttl: number, cb: CallBackBooleanParam): void;
-    abstract get(domain: string, url: string, category: string, ttl: number, cb: CallBackStringParam): void;
+    abstract get(domain: string, url: string, category: string, ttl: number, cb: CallBackGetResultsParam): void;
     abstract has(domain: string, url: string, category: string, ttl: number, cb: CallBackBooleanParam): void;
-    abstract set(domain: string, url: string, value: string, category: string,  ttl: number, force: boolean, cb: CallBackBooleanParam): void;
+    abstract set(domain: string, url: string, value: string, extra: string, category: string,  ttl: number, force: boolean, cb: CallBackBooleanParam): void;
 
     abstract clearCache(cb: CallBackBooleanParam): void;
     abstract clearDomain(domain: string, cb: CallBackBooleanParam): void;

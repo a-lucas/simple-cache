@@ -1,9 +1,9 @@
 "use strict";
 
-var CacheEngine = require('./../dist/redis-cache').CacheEnginePromise;
+var CacheEngine = require('./../dist/redis-cache').RedisUrlCache.CacheEnginePromise;
 
-var Instance = require('./../dist/redis-cache').Instance;
-var CacheRulesCreator = require('./../dist/redis-cache').CacheRulesCreator;
+var Instance = require('./../dist/redis-cache').RedisUrlCache.Instance;
+var CacheRulesCreator = require('./../dist/redis-cache').RedisUrlCache.CacheRulesCreator;
 
 var cacheRules = require('./helper/cacheRules');
 var oneInstance = require('./helper/oneInstance');

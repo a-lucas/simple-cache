@@ -2,25 +2,51 @@
 // Project: https://github.com/a-lucas/simple-url-cache
 // Definitions by: Antoine LUCAS <https://github.com/a-lucas>
 
-declare module "redis-url-cache" {
-    import 'es6-promise';
-
+export namespace RedisUrlCache {
     interface RegexRule {
-        regex:RegExp
+        regex:RegExp,
+        ignoreQuery?:boolean
     }
 
     interface MaxAgeRegexRule extends RegexRule {
         maxAge:number
     }
 
-    interface CacheRules {
-        maxAge:MaxAgeRegexRule[],
-        always:RegexRule[],
-        never:RegexRule[],
+    interface DomainRule<T> {
+        domain:string | RegExp,
+        rules:T[]
+    }
+
+    interface CallBackBooleanParam {
+        (err:string, res:boolean):any
+    }
+
+    interface CallBackStringParam {
+        (err:string, res:string):any
+    }
+
+    interface CallBackStringArrayParam {
+        (err:string, res:string[]):any
+    }
+
+    interface CallBackNoParam {
+        (err:string):any
+    }
+
+    export interface InstanceConfig {
+        on_existing_regex?:option_on_existing_regex //when adding a regex , and a similar is found, either replace it, ignore it, or throw an error
+        on_publish_update?:boolean // when the cacheEngine.publish( is called, will scann all existing created url objects, and re-calculate the url's category
+    }
+
+
+    export interface CacheRules {
+        maxAge:DomainRule<MaxAgeRegexRule>[],
+        always:DomainRule<RegexRule>[],
+        never:DomainRule<RegexRule>[],
         default:string
     }
 
-    interface RedisStorageConfig {
+    export interface RedisStorageConfig {
         host:string;
         port:number;
         path?:string;
@@ -30,26 +56,22 @@ declare module "redis-url-cache" {
         db?:string;
     }
 
-
-    interface CallBackBooleanParam {
-        (err: string, res: boolean): any
-    }
-
-    interface CallBackStringParam {
-        (err: string, res: string): any
-    }
-
-    interface CallBackStringArrayParam {
-        (err: string, res: string[]): any
-    }
+    export type option_on_existing_regex = 'replace' | 'ignore' | 'error';
 
     export class CachePromise {
-        getDomain(): string
-        getCategory(): string
-        getInstanceName(): string
-        getStorageType(): string
-        getUrl(): string
-        getTTL(): number
+
+        getDomain():string
+
+        getCategory():string
+
+        getInstanceName():string
+
+        getUrl():string
+
+        getTTL():number
+
+        setCacheCategory():void
+
         /**
          * Resolve to true if exists, false if not, and rejects an Error if any
          */
@@ -75,31 +97,37 @@ declare module "redis-url-cache" {
     }
 
     export class CacheCB {
-        getDomain(): string
-        getCategory(): string
-        getInstanceName(): string
-        getStorageType(): string
-        getUrl(): string
-        getTTL(): number
 
-        has(cb: CallBackBooleanParam):void;
+        getDomain():string
+
+        getCategory():string
+
+        getInstanceName():string
+
+        getUrl():string
+
+        getTTL():number
+
+        setCacheCategory():void
+
+        has(cb:CallBackBooleanParam):void;
 
         /**
          * returns to true if deleted, false if not there, and an Error if any
          */
-        delete(cb: CallBackBooleanParam):void
+        delete(cb:CallBackBooleanParam):void
 
         /**
          * Resolves to the html, Rejects undefined if not cached
          */
-        get(cb: CallBackStringParam): void;
+        get(cb:CallBackStringParam):void;
 
         /**
          * Resolve to true if cached, false if lready cached, and rejects an Error if any
          * @param html
          * @param force
          */
-        set(html:string, force:boolean, cb: CallBackBooleanParam):void
+        set(html:string, force:boolean, cb:CallBackBooleanParam):void
     }
 
     export class CacheEnginePromise {
@@ -110,7 +138,7 @@ declare module "redis-url-cache" {
          * @param storageConfig: Either a FileStorageConfig or a RedisStorageConfig
          * @param cacheRules
          */
-        constructor(defaultDomain:string, instance:string, storageConfig:RedisStorageConfig, cacheRules:CacheRules);
+        constructor(defaultDomain:string, instanceDefinition:Instance)
 
         /**
          *
@@ -145,23 +173,23 @@ declare module "redis-url-cache" {
          * @param storageConfig: Either a FileStorageConfig or a RedisStorageConfig
          * @param cacheRules
          */
-        constructor(defaultDomain:string, instance:string, storageConfig:RedisStorageConfig, cacheRules:CacheRules);
+        constructor(defaultDomain:string, instanceDefinition:Instance)
 
         /**
          *
          * @param domain If no domain is provided, then the default domain will be cleared
          */
-        clearDomain(cb: CallBackBooleanParam):void
+        clearDomain(cb:CallBackBooleanParam):void
 
-        clearDomain(domain:string, cb: CallBackBooleanParam): void
+        clearDomain(domain:string, cb:CallBackBooleanParam):void
 
-        clearInstance(cb:CallBackBooleanParam): void
+        clearInstance(cb:CallBackBooleanParam):void
 
-        getStoredHostnames(cb: CallBackStringArrayParam): void
+        getStoredHostnames(cb:CallBackStringArrayParam):void
 
-        getStoredURLs(cb: CallBackStringArrayParam):void
+        getStoredURLs(cb:CallBackStringArrayParam):void
 
-        getStoredURLs(domain:string, cb: CallBackStringArrayParam): void
+        getStoredURLs(domain:string, cb:CallBackStringArrayParam):void
 
         /**
          *
@@ -174,7 +202,35 @@ declare module "redis-url-cache" {
         url(url:string):CacheCB;
     }
 
+    export class CacheRuleManager {
+        addMaxAgeRule(domain:string | RegExp, regex:RegExp, maxAge:number, ignoreQuery?:boolean):void
 
+        addAlwaysRule(domain:string | RegExp, regex:RegExp, ignoreQuery?:boolean):void
+
+        addNeverRule(domain:string | RegExp, regex:RegExp, ignoreQuery?:boolean):void
+
+        getRules():CacheRules
+
+        setDefault(strategy:string):void
+
+        removeRule(domain:string | RegExp, rule:RegexRule):void
+
+        removeAllMaxAgeRules():void
+
+        removeAllNeverRules():void
+
+        removeAllAlwaysRules():void
+    }
+
+    export class CacheRulesCreator {
+        static createCache(instanceName: string, force: boolean, redisConfig: RedisStorageConfig, rules: CacheRules, cb: Function);
+    }
+
+    export class Instance {
+        constructor(instanceName:string, redisConfig:RedisStorageConfig, config:InstanceConfig, cb:CallBackNoParam)
+
+        publish():void
+
+        getManager():CacheRuleManager
+    }
 }
-
-//}

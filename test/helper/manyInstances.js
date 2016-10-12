@@ -47,7 +47,7 @@ module.exports = function(type, data) {
     describe('Instance 1 ...', function () {
         var i;
         for(i=0; i<3; i++) {
-            SET_URL(instance1Urls[i], html);
+            SET_URL(instance1Urls[i], html, { key: 'value' });
         }
     });
 
@@ -65,7 +65,7 @@ module.exports = function(type, data) {
     describe('Instance 3 ...', function () {
         var i;
         for(i=0; i<3; i++) {
-            SET_URL(instance3Urls[i], html);
+            SET_URL(instance3Urls[i], html, { key: 'value' });
         }
     });
 

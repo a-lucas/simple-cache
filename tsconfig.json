@@ -14,7 +14,7 @@
         "watch": true
     },
     "files": [
-        "./typings/index.d.ts",
+        "typings/index.d.ts",
         "ts/index.ts"
     ]
 }

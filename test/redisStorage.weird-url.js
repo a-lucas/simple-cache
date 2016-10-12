@@ -1,7 +1,7 @@
 "use strict";
 
-var CacheEngine = require('./../dist/redis-cache').CacheEnginePromise;
-var Instance = require('./../dist/redis-cache').Instance;
+var CacheEngine = require('./../dist/redis-cache').RedisUrlCache.CacheEnginePromise;
+var Instance = require('./../dist/redis-cache').RedisUrlCache.Instance;
 
 var weirdUrls = require('./helper/weirdUrls');
 var common = require('./helper/commonCB');
@@ -81,7 +81,7 @@ var testURLs = function(data) {
         urls = data.urls;
 
     urls.forEach(function(url) {
-        SET_URL(url, 'content');
+        SET_URL(url, 'content', { key: 'value' });
         DELETE_URL(url, 'content');
     });
 };
