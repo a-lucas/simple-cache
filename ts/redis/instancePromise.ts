@@ -1,4 +1,4 @@
-import {CacheRules, GetResults} from "./../interfaces";
+import {CacheRules, IGetResults} from "./../interfaces";
 import * as debg from 'debug';
 import {Promise} from 'es6-promise';
 import RedisStorageInstanceCB from "./instanceCB";
@@ -111,7 +111,7 @@ export default class RedisStoragePromise extends StoragePromise {
      *      -> if not set, not cached
      *          HMDEL domain:instance key
      */
-    get(domain: string, url:string, category, ttl):Promise<GetResults> {
+    get(domain: string, url:string, category, ttl):Promise<IGetResults> {
         //debug('Retrieving url cache: ', domain, url);
         return new Promise((resolve, reject) => {
             this.cbInstance.get(domain, url, category, ttl, (err, results) => {

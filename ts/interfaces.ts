@@ -33,7 +33,7 @@ export interface RedisStorageConfig{
 }
 
 
-export interface GetResults {
+export interface IGetResults {
     content: string,
     createdOn: number,
     extra: any
@@ -45,7 +45,7 @@ export interface parsedURL {
 }
 
 export interface CallBackGetResultsParam {
-    (err: string | Error, res?: GetResults): any
+    (err: string | Error, res?: IGetResults): any
 }
 
 export interface CallBackBooleanParam {

@@ -17,6 +17,16 @@ export namespace RedisUrlCache {
         rules:T[]
     }
 
+    export interface IGetResults {
+        content: string,
+        createdOn: number,
+        extra: any
+    }
+
+    interface CallBackGetResultsParam {
+        (err: string | Error, res?: IGetResults): any
+    }
+
     interface CallBackBooleanParam {
         (err:string, res:boolean):any
     }
@@ -37,8 +47,7 @@ export namespace RedisUrlCache {
         on_existing_regex?:option_on_existing_regex //when adding a regex , and a similar is found, either replace it, ignore it, or throw an error
         on_publish_update?:boolean // when the cacheEngine.publish( is called, will scann all existing created url objects, and re-calculate the url's category
     }
-
-
+    
     export interface CacheRules {
         maxAge:DomainRule<MaxAgeRegexRule>[],
         always:DomainRule<RegexRule>[],
@@ -85,15 +94,11 @@ export namespace RedisUrlCache {
         /**
          * Resolves to the html, Rejects undefined if not cached
          */
-        get():Promise<string>;
+        get():Promise<IGetResults>;
 
-        set(html:string):Promise<boolean>;
-        /**
-         * Resolve to true if cached, false if lready cached, and rejects an Error if any
-         * @param html
-         * @param force
-         */
-        set(html:string, force:boolean):Promise<boolean>;
+        set(html:string, extra: Object):Promise<boolean>;
+
+        set(html:string, extra: Object, force:boolean):Promise<boolean>;
     }
 
     export class CacheCB {
@@ -120,14 +125,14 @@ export namespace RedisUrlCache {
         /**
          * Resolves to the html, Rejects undefined if not cached
          */
-        get(cb:CallBackStringParam):void;
+        get(cb:CallBackGetResultsParam):void;
 
         /**
          * Resolve to true if cached, false if lready cached, and rejects an Error if any
          * @param html
          * @param force
          */
-        set(html:string, force:boolean, cb:CallBackBooleanParam):void
+        set(html:string, extra: Object, force:boolean, cb:CallBackBooleanParam):void
     }
 
     export class CacheEnginePromise {

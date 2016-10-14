@@ -1,6 +1,6 @@
 import {Promise} from 'es6-promise';
 
-import {CallBackBooleanParam, CallBackGetResultsParam, GetResults, method, CacheRules, CallBackStringParam, CallBackStringArrayParam} from "../interfaces";
+import {CallBackBooleanParam, CallBackGetResultsParam, IGetResults, method, CacheRules, CallBackStringParam, CallBackStringArrayParam} from "../interfaces";
 
 abstract class Storage {
     protected method: method;
@@ -17,7 +17,7 @@ abstract class Storage {
 export abstract class StoragePromise extends Storage{
 
     abstract delete(domain: string, url: string, category: string, ttl: number): Promise<boolean>;
-    abstract get(domain: string, url: string, category: string, ttl: number): Promise<GetResults>;
+    abstract get(domain: string, url: string, category: string, ttl: number): Promise<IGetResults>;
     abstract has(domain: string, url: string, category: string, ttl: number): Promise<boolean>;
     abstract set(domain: string, url: string, value: string, extra: string, category: string,  ttl: number, force: boolean): Promise<boolean>;
 

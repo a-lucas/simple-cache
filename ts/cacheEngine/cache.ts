@@ -1,4 +1,4 @@
-import {RegexRule, CallBackBooleanParam, CallBackStringParam, GetResults, CallBackGetResultsParam} from '../interfaces';
+import {RegexRule, CallBackBooleanParam, CallBackStringParam, IGetResults, CallBackGetResultsParam} from '../interfaces';
 import Helpers from  '../helpers';
 import {Promise} from 'es6-promise';
 import RedisStoragePromise from "../redis/instancePromise";
@@ -115,7 +115,7 @@ export class UrlPromise extends UrlCommon {
 
     };
 
-    get = (): Promise<GetResults> => {
+    get = (): Promise<IGetResults> => {
         return this._storagePromise.get(this.getDomain(), this.getUrl(), this.getCategory(), this.getTTL());
     };
 
