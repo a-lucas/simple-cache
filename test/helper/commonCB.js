@@ -241,7 +241,7 @@ function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
 
     describe('Creating a new Config for '+ instanceName, function () {
 
-        it('We delete redis Exiting Cache Config', function (done) {
+        it('delete redis Exiting Cache Config', function (done) {
             const client = redis.createClient(storageConfig);
 
             client.hdel('url-cache:ruleconfig', instanceName, function (err) {
@@ -257,7 +257,7 @@ function RECREATE_CONFIG(instanceName, storageConfig, cacheRules) {
             });
         });
 
-        it('should complain about the fact that a Cache Config already exists', function () {
+        it('should complain about the fact that a Cache Config already exists', function (done) {
 
             CacheRulesCreator.createCache(instanceName, false, storageConfig, cacheRules, function (err) {
                 if (err) return done();
