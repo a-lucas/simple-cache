@@ -16,16 +16,12 @@ var storageConfig = {
 
 var cacheRules = require('./helper/cacheRules');
 
-describe.only('It should fail on wrong parameters', function() {
+describe('It should fail on wrong parameters', function() {
 
     describe('Config creator', function() {
 
         it('should fail with no arguments', function() {
-            CacheRulesCreator.createCache('INSTANCE', false, storageConfig, cacheRules, function (err) {
-                if (err) return done(err);
-                done();
-            });
-            expect(function(){CacheRulesCreator.createCache();}).to.throw;
+           expect(function(){CacheRulesCreator.createCache();}).to.throw;
         });
 
         it('should fail with 3 null arguments', function() {
@@ -51,14 +47,14 @@ describe.only('It should fail on wrong parameters', function() {
             CacheRulesCreator.createCache('INSTANCE', true, storageConfig, cacheRules, function(err) {
                 if(err) return done(err);
                 done();
-            })
+            });
         });
 
         it('Should complain that an instance with the same name already exists', function(done) {
             CacheRulesCreator.createCache('INSTANCE', false, storageConfig, cacheRules, function(err) {
                 if(err) return done();
                 done('should complain');
-            })
+            });
         });
 
     });
