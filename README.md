@@ -5,7 +5,6 @@ Conditionally cache your URL's content on REDIS with RegExp. Also supports cache
 
 
 <!--## API documentation
-
 https://a-lucas.github.io/redis-url-cache
 -->
 
