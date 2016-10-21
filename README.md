@@ -342,25 +342,43 @@ An example worth 1000 words :
 ```javascript
 
 exports.cacheConfig = {
-    // Will cache all URL starting with /posts/ and ending with html for 24 hours
-    cacheMaxAge: [ 
+    // Will cache all URL starting with /posts/ and ending with html for 24 hours for mydomain.com
+    cacheMaxAge: [
+        
         {
-            regex: /^\/posts.*html$/,  
-            maxAge: 3600
+            domain: 'mydomain.com',
+            rules; [
+                {
+                    regex: /^\/posts.*html$/,  
+                    maxAge: 3600    
+                }
+            ]
+            
         }
     ],
-    // Will cache about-us.html, contact-us.html and /prices.html indefinitively
-    cacheAlways: [  
+    // Will cache about-us.html, contact-us.html and /prices.html indefinitively for mydomain.com, and same for any hostname containing `cdn`.
+    cacheAlways: [
         {
-            regex: /^about-us\.html$/, 
-            regex: /^contact-us\.html$/,
-            regex: /^prices\.html$/
+            domain: /mydomain\.com/,
+            rules: [
+                {regex: /^about-us\.html$/},
+                {regex: /^contact-us\.html$/},
+                {regex: /^prices\.html$/}    
+            ]
+            
+        },
+        {
+            domain: /cnd/,
+            rules: [ { regex: /.*/ } ]
         }
     ],
-    // will never cache the url /sitemaps.html
+    // will never cache sockets
     cacheNever: [ 
-        {
-            regex: /^sitemaps\.html$/
+        {   
+            domain: /.*/,
+            rules: [
+                {regex: /socket/}
+            ]           
         }
     ], 
     // If no URL is matched against these rules, then the default is to never cache it. can be 'never' or 'always'
