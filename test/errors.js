@@ -16,35 +16,49 @@ var storageConfig = {
 
 var cacheRules = require('./helper/cacheRules');
 
-describe('It should fail on wrong parameters', function() {
+describe.only('It should fail on wrong parameters', function() {
 
     describe('Config creator', function() {
 
         it('should fail with no arguments', function() {
-            expect(function(){new CacheRulesCreator();}).to.throw;
+            CacheRulesCreator.createCache('INSTANCE', false, storageConfig, cacheRules, function (err) {
+                if (err) return done(err);
+                done();
+            });
+            expect(function(){CacheRulesCreator.createCache();}).to.throw;
         });
 
         it('should fail with 3 null arguments', function() {
-            expect(function(){new CacheRulesCreator(null, null, null);}).to.throw;
-        });
-
-        it('should fail with 3 null arguments', function() {
-            expect(function(){new CacheRulesCreator(null, null, null);}).to.throw;
+            expect(function(){CacheRulesCreator.createCache(null, null, null, null, null);}).to.throw;
         });
 
 
         it('should fail with first wrong argument null arguments', function() {
-            expect(function(){new CacheRulesCreator('', storageConfig, cacheRules);}).to.throw;
+            expect(function(){new CacheRulesCreator('', false, storageConfig, cacheRules, function(err){});}).to.throw;
         });
 
 
-        it('should fail with econf wrong argument null arguments', function() {
-            expect(function(){new CacheRulesCreator('whatever', {}, cacheRules);}).to.throw;
+        it('should fail with conf wrong argument null arguments', function() {
+            expect(function(){new CacheRulesCreator('whatever', false, {}, cacheRules, function(err){});}).to.throw;
         });
 
 
         it('should fail with invalid cacheRules wrong argument null arguments', function() {
-            expect(function(){new CacheRulesCreator('aaaa', storageConfig, {});}).to.throw;
+            expect(function(){new CacheRulesCreator('aaaa', false, storageConfig, {}, function(err){});}).to.throw;
+        });
+
+        it('Should create a new cacheRule ok', function(done) {
+            CacheRulesCreator.createCache('INSTANCE', true, storageConfig, cacheRules, function(err) {
+                if(err) return done(err);
+                done();
+            })
+        });
+
+        it('Should complain that an instance with the same name already exists', function(done) {
+            CacheRulesCreator.createCache('INSTANCE', false, storageConfig, cacheRules, function(err) {
+                if(err) return done();
+                done('should complain');
+            })
         });
 
     });
@@ -58,14 +72,6 @@ describe('It should fail on wrong parameters', function() {
             expect(function(){new Instance(null, null, null, null)}).to.throw;
         });
 
-        it('should fail with Invalid storage config', function(done) {
-            new Instance('INSTANCE', {host: '127.0.0.1', port: 6000}, {}, (err)=>{
-                if(err) {return done();}
-                else {
-                    return done('no error');
-                }
-            });
-        });
 
         it('should fail with valid storage config but inexistant instance', function(done) {
             new Instance('DONT EXISTS', storageConfig, {}, (err)=>{
@@ -80,14 +86,14 @@ describe('It should fail on wrong parameters', function() {
         describe('Promise', function() {
             var instance1,
                 instance2;
-            it('creates a valid instance', function(done) {
+            it('loads a valid instance', function(done) {
                 instance1 = new Instance('INSTANCE', storageConfig, {}, (err) => {
                     if(err) return done(err);
                     done();
                 });
             });
 
-            it('creates an invalid instance', function(done) {
+            it('loads an invalid instance', function(done) {
                 instance2 = new Instance('IIIIIINSTANCE_NOT_VALID', storageConfig, {}, (err) => {
                     if(err) {return done();}
                     else {
@@ -112,6 +118,12 @@ describe('It should fail on wrong parameters', function() {
                 it('should fail withwith correct domain, unitialized instance', function() {
                     expect(function(){ new CacheEnginePromise('some-domain', instance2)}).to.throw;
                 });
+
+                it('should succeed ', function() {
+                    expect(function(){ new CacheEnginePromise('some-domain', instance1)}).to.not.throw;
+                });
+
+
             });
 
             describe('URL', function() {
